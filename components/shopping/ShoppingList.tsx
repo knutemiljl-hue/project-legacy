@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { Check, Circle, ShoppingBasket, Trash2 } from "lucide-react";
 import {
   ShoppingItem,
+  deleteShoppingItem,
   readShoppingItems,
-  saveShoppingItems,
+  subscribeToShoppingItems,
+  updateShoppingItemCompleted,
 } from "@/lib/shopping";
 import { getUserDisplayName } from "@/lib/users";
 
@@ -27,37 +29,50 @@ function CreatedByText({ createdBy }: { createdBy?: string }) {
 
 export default function ShoppingList({ compact = false }: ShoppingListProps) {
   const [items, setItems] = useState<ShoppingItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadItems();
 
+    const unsubscribeFromShopping = subscribeToShoppingItems(loadItems);
+
     window.addEventListener("project-legacy-shopping-updated", loadItems);
-    window.addEventListener("storage", loadItems);
+    window.addEventListener("focus", loadItems);
 
     return () => {
+      unsubscribeFromShopping();
       window.removeEventListener("project-legacy-shopping-updated", loadItems);
-      window.removeEventListener("storage", loadItems);
+      window.removeEventListener("focus", loadItems);
     };
   }, []);
 
-  function loadItems() {
-    setItems(readShoppingItems());
+  async function loadItems() {
+    setIsLoading(true);
+
+    const nextItems = await readShoppingItems();
+
+    setItems(nextItems);
+    setIsLoading(false);
   }
 
-  function toggleItem(itemId: string) {
-    const nextItems = items.map((item) =>
-      item.id === itemId ? { ...item, completed: !item.completed } : item
+  async function toggleItem(item: ShoppingItem) {
+    const nextItems = items.map((currentItem) =>
+      currentItem.id === item.id
+        ? { ...currentItem, completed: !currentItem.completed }
+        : currentItem
     );
 
     setItems(nextItems);
-    saveShoppingItems(nextItems);
+
+    await updateShoppingItemCompleted(item.id, !item.completed);
   }
 
-  function deleteItem(itemId: string) {
+  async function removeItem(itemId: string) {
     const nextItems = items.filter((item) => item.id !== itemId);
 
     setItems(nextItems);
-    saveShoppingItems(nextItems);
+
+    await deleteShoppingItem(itemId);
   }
 
   const openItems = items.filter((item) => !item.completed);
@@ -96,7 +111,13 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
         </div>
       </div>
 
-      {items.length === 0 ? (
+      {isLoading ? (
+        <div className="rounded-2xl bg-[#F7F4EA] p-4">
+          <p className="text-sm leading-6 text-stone-600">
+            Henter handlelisten …
+          </p>
+        </div>
+      ) : items.length === 0 ? (
         <div className="rounded-2xl bg-[#F7F4EA] p-4">
           <p className="text-sm leading-6 text-stone-600">
             Handlelisten er tom. Legg til varer via <strong>+ Ny</strong>.
@@ -133,7 +154,8 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
                     }`}
                   >
                     <button
-                      onClick={() => toggleItem(item.id)}
+                      type="button"
+                      onClick={() => toggleItem(item)}
                       className="flex flex-1 items-center gap-3 text-left"
                     >
                       <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white text-stone-300">
@@ -150,7 +172,8 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
                     </button>
 
                     <button
-                      onClick={() => deleteItem(item.id)}
+                      type="button"
+                      onClick={() => removeItem(item.id)}
                       className="grid h-8 w-8 place-items-center rounded-full text-stone-400 transition hover:bg-white hover:text-red-600"
                       aria-label={`Slett ${item.title}`}
                       title="Slett vare"
@@ -182,7 +205,8 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
                     className="flex items-center justify-between gap-4 rounded-2xl bg-[#F4F8EF] px-4 py-3"
                   >
                     <button
-                      onClick={() => toggleItem(item.id)}
+                      type="button"
+                      onClick={() => toggleItem(item)}
                       className="flex flex-1 items-center gap-3 text-left"
                     >
                       <span className="grid h-5 w-5 place-items-center rounded-full bg-[#8EB069] text-white">
@@ -199,7 +223,8 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
                     </button>
 
                     <button
-                      onClick={() => deleteItem(item.id)}
+                      type="button"
+                      onClick={() => removeItem(item.id)}
                       className="grid h-8 w-8 place-items-center rounded-full text-stone-400 transition hover:bg-white hover:text-red-600"
                       aria-label={`Slett ${item.title}`}
                       title="Slett vare"

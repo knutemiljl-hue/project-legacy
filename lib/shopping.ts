@@ -1,6 +1,5 @@
+import { supabase } from "@/lib/supabase";
 import { LegacyUserId, readActiveUser } from "@/lib/users";
-
-export const SHOPPING_ITEMS_KEY = "project-legacy-shopping-items";
 
 export type ShoppingItem = {
   id: string;
@@ -10,60 +9,51 @@ export type ShoppingItem = {
   createdBy?: LegacyUserId;
 };
 
-function canUseStorage() {
-  return typeof window !== "undefined";
-}
+type ShoppingItemRow = {
+  id: string;
+  title: string;
+  completed: boolean;
+  created_by: LegacyUserId | null;
+  created_at: string;
+};
 
-function readJson<T>(key: string, fallback: T): T {
-  if (!canUseStorage()) {
-    return fallback;
-  }
-
-  const storedValue = window.localStorage.getItem(key);
-
-  if (!storedValue) {
-    return fallback;
-  }
-
-  try {
-    return JSON.parse(storedValue) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-function writeJson<T>(key: string, value: T) {
-  if (!canUseStorage()) {
-    return;
-  }
-
-  window.localStorage.setItem(key, JSON.stringify(value));
+function mapShoppingItem(row: ShoppingItemRow): ShoppingItem {
+  return {
+    id: row.id,
+    title: row.title,
+    completed: row.completed,
+    createdAt: row.created_at,
+    createdBy: row.created_by ?? undefined,
+  };
 }
 
 export function notifyShoppingUpdated() {
-  if (!canUseStorage()) {
+  if (typeof window === "undefined") {
     return;
   }
 
-  window.setTimeout(() => {
-    window.dispatchEvent(new Event("project-legacy-shopping-updated"));
-  }, 0);
+  window.dispatchEvent(new Event("project-legacy-shopping-updated"));
 }
 
-export function readShoppingItems(): ShoppingItem[] {
-  return readJson<ShoppingItem[]>(SHOPPING_ITEMS_KEY, []);
+export async function readShoppingItems(): Promise<ShoppingItem[]> {
+  const { data, error } = await supabase
+    .from("legacy_shopping_items")
+    .select("id, title, completed, created_by, created_at")
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("Kunne ikke hente handleliste:", error);
+    return [];
+  }
+
+  return (data ?? []).map((item) => mapShoppingItem(item as ShoppingItemRow));
 }
 
-export function saveShoppingItems(items: ShoppingItem[]) {
-  writeJson(SHOPPING_ITEMS_KEY, items);
-  notifyShoppingUpdated();
+export async function addShoppingItem(title: string) {
+  await addShoppingItems(title);
 }
 
-export function addShoppingItem(title: string) {
-  addShoppingItems(title);
-}
-
-export function addShoppingItems(input: string) {
+export async function addShoppingItems(input: string) {
   const titles = input
     .split(/\n|,/)
     .map((title) => title.trim())
@@ -74,15 +64,71 @@ export function addShoppingItems(input: string) {
   }
 
   const activeUser = readActiveUser();
-  const existingItems = readShoppingItems();
 
-  const newItems: ShoppingItem[] = titles.map((title, index) => ({
-    id: `shopping-${Date.now()}-${index}`,
+  const rows = titles.map((title) => ({
     title,
     completed: false,
-    createdAt: new Date().toISOString(),
-    createdBy: activeUser.id,
+    created_by: activeUser.id,
   }));
 
-  saveShoppingItems([...existingItems, ...newItems]);
+  const { error } = await supabase.from("legacy_shopping_items").insert(rows);
+
+  if (error) {
+    console.error("Kunne ikke legge til varer:", error);
+    return;
+  }
+
+  notifyShoppingUpdated();
+}
+
+export async function updateShoppingItemCompleted(
+  itemId: string,
+  completed: boolean
+) {
+  const { error } = await supabase
+    .from("legacy_shopping_items")
+    .update({ completed })
+    .eq("id", itemId);
+
+  if (error) {
+    console.error("Kunne ikke oppdatere vare:", error);
+    return;
+  }
+
+  notifyShoppingUpdated();
+}
+
+export async function deleteShoppingItem(itemId: string) {
+  const { error } = await supabase
+    .from("legacy_shopping_items")
+    .delete()
+    .eq("id", itemId);
+
+  if (error) {
+    console.error("Kunne ikke slette vare:", error);
+    return;
+  }
+
+  notifyShoppingUpdated();
+}
+
+export function subscribeToShoppingItems(onChange: () => void) {
+  const channel = supabase
+    .channel("legacy-shopping-items")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "legacy_shopping_items",
+      },
+      () => {
+        onChange();
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }
