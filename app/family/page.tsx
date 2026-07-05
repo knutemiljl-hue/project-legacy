@@ -3,21 +3,6 @@ import FamilyCalendar from "@/components/calendar/FamilyCalendar";
 import FamilyTasksSummary from "@/components/family/FamilyTasksSummary";
 import ShoppingList from "@/components/shopping/ShoppingList";
 
-const familyCards = [
-  {
-    title: "Kalender",
-    description: "Avtaler, helsestasjon, familieselskap og felles planer.",
-  },
-  {
-    title: "Handleliste",
-    description: "Felles liste for mat, bleier, utstyr og hverdagslogistikk.",
-  },
-  {
-    title: "Praktisk hjemme",
-    description: "Små ting som må ordnes for at hverdagen skal flyte bedre.",
-  },
-];
-
 export default function FamilyPage() {
   return (
     <main className="space-y-6">
@@ -50,21 +35,6 @@ export default function FamilyPage() {
       </section>
 
       <FamilyCalendar />
-
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {familyCards.map((card) => (
-          <div
-            key={card.title}
-            className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm"
-          >
-            <p className="text-sm font-medium text-[#8D846F]">{card.title}</p>
-
-            <p className="mt-3 text-sm leading-6 text-stone-600">
-              {card.description}
-            </p>
-          </div>
-        ))}
-      </section>
     </main>
   );
 }
