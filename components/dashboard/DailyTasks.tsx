@@ -23,6 +23,19 @@ import {
   saveCustomTasks,
   saveTaskHistory,
 } from "@/lib/tasks";
+import { getUserDisplayName } from "@/lib/users";
+
+function CreatedByText({ createdBy }: { createdBy?: string }) {
+  if (!createdBy) {
+    return null;
+  }
+
+  return (
+    <span className="text-xs text-stone-400">
+      · Lagt til av {getUserDisplayName(createdBy)}
+    </span>
+  );
+}
 
 function TaskList({
   title,
@@ -50,9 +63,7 @@ function TaskList({
           {title}
         </h3>
 
-        <p className="text-xs text-stone-400">
-          {visibleTasks.length} åpne
-        </p>
+        <p className="text-xs text-stone-400">{visibleTasks.length} åpne</p>
       </div>
 
       {visibleTasks.length === 0 ? (
@@ -83,6 +94,7 @@ function TaskList({
                     <p className="font-medium text-[#24312A]">{task.title}</p>
                     <p className="mt-1 text-sm text-stone-500">
                       {task.subtitle}
+                      <CreatedByText createdBy={task.createdBy} />
                     </p>
                   </div>
                 </button>
@@ -188,6 +200,7 @@ function CompletedTasks({
                     {getScopeLabel(task.scope)}
                     {formattedDate ? ` · ${formattedDate}` : ""}
                     {task.time ? ` · ${task.time}` : ""}
+                    <CreatedByText createdBy={task.createdBy} />
                   </p>
                 </div>
 
@@ -339,6 +352,7 @@ export default function DailyTasks() {
           scope: task.scope,
           completedAt: record.completedAt,
           xp: record.xp,
+          createdBy: task.createdBy,
         };
       })
       .filter(Boolean) as ArchivedTask[];

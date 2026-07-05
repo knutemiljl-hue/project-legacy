@@ -6,10 +6,23 @@ import {
   readShoppingItems,
   saveShoppingItems,
 } from "@/lib/shopping";
+import { getUserDisplayName } from "@/lib/users";
 
 type ShoppingListProps = {
   compact?: boolean;
 };
+
+function CreatedByText({ createdBy }: { createdBy?: string }) {
+  if (!createdBy) {
+    return null;
+  }
+
+  return (
+    <p className="mt-1 text-xs text-stone-400">
+      Lagt til av {getUserDisplayName(createdBy)}
+    </p>
+  );
+}
 
 export default function ShoppingList({ compact = false }: ShoppingListProps) {
   const [items, setItems] = useState<ShoppingItem[]>([]);
@@ -124,9 +137,13 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
                     >
                       <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white" />
 
-                      <p className="font-medium text-[#24312A]">
-                        {item.title}
-                      </p>
+                      <div>
+                        <p className="font-medium text-[#24312A]">
+                          {item.title}
+                        </p>
+
+                        <CreatedByText createdBy={item.createdBy} />
+                      </div>
                     </button>
 
                     <button
@@ -169,9 +186,13 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
                         ✓
                       </span>
 
-                      <p className="text-sm font-medium text-[#24312A] line-through decoration-stone-400">
-                        {item.title}
-                      </p>
+                      <div>
+                        <p className="text-sm font-medium text-[#24312A] line-through decoration-stone-400">
+                          {item.title}
+                        </p>
+
+                        <CreatedByText createdBy={item.createdBy} />
+                      </div>
                     </button>
 
                     <button
