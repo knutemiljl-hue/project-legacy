@@ -23,18 +23,21 @@ export const statusCards = [
 
 export const dailyTasks = [
   {
+    id: "strength-training",
     title: "Tren styrke",
     subtitle: "Fullfør treningsøkt",
     time: "07:00",
     done: true,
   },
   {
+    id: "family-presence",
     title: "Vær til stede hjemme",
     subtitle: "Ingen mobil under familietid",
     time: "17:00",
     done: false,
   },
   {
+    id: "client-meeting-prep",
     title: "Forbered klientmøte",
     subtitle: "BAHR",
     time: "20:30",
