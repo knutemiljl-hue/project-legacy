@@ -50,20 +50,28 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
   const completedItems = items.filter((item) => item.completed);
 
   return (
-    <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+    <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-6 shadow-sm ring-1 ring-black/5">
       <div className="mb-5 flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-[#8D846F]">Handleliste</p>
+        <div className="flex items-start gap-4">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-lg text-[#4F773D]">
+            ♧
+          </div>
 
-          <h2 className="mt-1 text-2xl font-semibold text-[#24312A]">
-            Felles innkjøp
-          </h2>
-
-          {!compact && (
-            <p className="mt-2 text-sm leading-6 text-stone-600">
-              En enkel felles liste for mat, bleier, utstyr og småting.
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
+              Handleliste
             </p>
-          )}
+
+            <h2 className="mt-1 text-2xl font-semibold text-[#24312A]">
+              Felles innkjøp
+            </h2>
+
+            {!compact && (
+              <p className="mt-2 text-sm leading-6 text-stone-600">
+                En enkel felles liste for mat, bleier, utstyr og småting.
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="rounded-2xl bg-[#F7F4EA] px-4 py-3 text-right">
@@ -81,10 +89,10 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-5">
           <div>
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-[#8D846F]">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
                 Å handle
               </h3>
 
@@ -100,17 +108,21 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {openItems.map((item) => (
+              <div className="overflow-hidden rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA]">
+                {openItems.map((item, index) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between rounded-2xl bg-[#F7F4EA] p-4"
+                    className={`flex items-center justify-between gap-4 px-4 py-3 ${
+                      index !== openItems.length - 1
+                        ? "border-b border-[#ECE3D4]"
+                        : ""
+                    }`}
                   >
                     <button
                       onClick={() => toggleItem(item.id)}
                       className="flex flex-1 items-center gap-3 text-left"
                     >
-                      <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300" />
+                      <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white" />
 
                       <p className="font-medium text-[#24312A]">
                         {item.title}
@@ -134,7 +146,7 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
           {completedItems.length > 0 && (
             <div>
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-[#8D846F]">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
                   Handlet
                 </h3>
 
@@ -147,7 +159,7 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
                 {completedItems.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between rounded-2xl bg-[#F4F8EF] px-4 py-3"
+                    className="flex items-center justify-between gap-4 rounded-2xl bg-[#F4F8EF] px-4 py-3"
                   >
                     <button
                       onClick={() => toggleItem(item.id)}
