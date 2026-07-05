@@ -6,7 +6,6 @@ import QuickAddMenu from "./QuickAddMenu";
 const pageTitles: Record<string, string> = {
   "/": "Oversikt",
   "/family": "Familien",
-  "/me": "Meg",
   "/journal": "Journal",
   "/settings": "Innstillinger",
   "/archive": "Arkiv",

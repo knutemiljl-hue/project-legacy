@@ -1,6 +1,9 @@
-import Link from "next/link";
+"use client";
 
-const navItems = [
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const navigationItems = [
   {
     label: "Oversikt",
     href: "/",
@@ -8,10 +11,6 @@ const navItems = [
   {
     label: "Familien",
     href: "/family",
-  },
-  {
-    label: "Meg",
-    href: "/me",
   },
   {
     label: "Journal",
@@ -24,29 +23,48 @@ const navItems = [
 ];
 
 export default function Sidebar() {
+  const pathname = usePathname();
+
   return (
-    <aside className="hidden min-h-screen w-72 shrink-0 border-r border-stone-200 bg-[#F7F4EA] p-6 lg:block">
-      <div className="mb-10">
-        <p className="text-sm uppercase tracking-[0.2em] text-[#8D846F]">
-          Project
-        </p>
+    <aside className="hidden min-h-screen w-64 shrink-0 border-r border-stone-200 bg-[#F7F4EA] px-5 py-6 lg:block">
+      <div>
+        <p className="text-sm font-medium text-[#8D846F]">Project</p>
 
         <h1 className="mt-1 text-2xl font-semibold text-[#24312A]">
           Legacy
         </h1>
       </div>
 
-      <nav className="space-y-2">
-        {navItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="block w-full rounded-2xl px-4 py-3 text-left text-sm font-medium text-[#24312A] transition hover:bg-[#E5DB8E]/40"
-          >
-            {item.label}
-          </Link>
-        ))}
+      <nav className="mt-10 space-y-2">
+        {navigationItems.map((item) => {
+          const isActive =
+            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`block rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                isActive
+                  ? "bg-white text-[#24312A] shadow-sm"
+                  : "text-stone-500 hover:bg-white/70 hover:text-[#24312A]"
+              }`}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
+
+      <div className="mt-10 rounded-3xl bg-white p-4 shadow-sm">
+        <p className="text-sm font-semibold text-[#24312A]">
+          Familien Lie
+        </p>
+
+        <p className="mt-2 text-sm leading-6 text-stone-500">
+          Et rolig system for hverdag, familie og retning.
+        </p>
+      </div>
     </aside>
   );
 }

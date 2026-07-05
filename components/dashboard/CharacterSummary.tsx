@@ -38,7 +38,7 @@ export default function CharacterSummary() {
     <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-medium text-[#8D846F]">Meg</p>
+          <p className="text-sm font-medium text-[#8D846F]">XP</p>
 
           <h2 className="mt-1 text-2xl font-semibold text-[#24312A]">
             Nivå {level}
@@ -53,7 +53,7 @@ export default function CharacterSummary() {
 
       <div>
         <div className="mb-2 flex items-center justify-between text-sm">
-          <p className="font-medium text-[#24312A]">Kapittel I</p>
+          <p className="font-medium text-[#24312A]">Oppgaver</p>
           <p className="text-stone-500">
             {currentLevelXp} / {XP_PER_LEVEL} XP
           </p>
@@ -68,7 +68,7 @@ export default function CharacterSummary() {
       </div>
 
       <p className="mt-4 text-sm leading-6 text-stone-600">
-        XP kommer fra fullførte oppgaver. Hver oppgave gir 5 XP.
+        XP kommer kun fra fullførte egne oppgaver og familieoppgaver.
       </p>
     </section>
   );
