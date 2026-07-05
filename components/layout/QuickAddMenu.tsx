@@ -315,7 +315,7 @@ export default function QuickAddMenu() {
 
                       <button
                         onClick={saveTask}
-                        className="rounded-2xl bg-[#F3D66B] px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
+                        className="rounded-2xl bg-[#3F6F35] px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:brightness-110"
                       >
                         Lagre gjøremål
                       </button>
@@ -354,7 +354,7 @@ export default function QuickAddMenu() {
 
                       <button
                         onClick={saveShoppingItems}
-                        className="rounded-2xl bg-[#F3D66B] px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
+                        className="rounded-2xl bg-[#3F6F35] px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:brightness-110"
                       >
                         Legg til varer
                       </button>
@@ -458,7 +458,7 @@ export default function QuickAddMenu() {
 
                       <button
                         onClick={saveCalendarEvent}
-                        className="rounded-2xl bg-[#F3D66B] px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
+                        className="rounded-2xl bg-[#3F6F35] px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:brightness-110"
                       >
                         Lagre avtale
                       </button>
@@ -498,7 +498,7 @@ export default function QuickAddMenu() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="rounded-2xl bg-[#F3D66B] px-4 py-2 font-medium text-[#24312A] transition hover:brightness-95"
+        className="rounded-2xl bg-[#3F6F35] px-4 py-2 font-medium text-white shadow-sm transition hover:brightness-110"
       >
         + Ny
       </button>
