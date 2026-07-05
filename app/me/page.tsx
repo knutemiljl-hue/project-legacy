@@ -1,5 +1,35 @@
 import AppShell from "@/components/layout/AppShell";
-import Card from "@/components/ui/Card";
+import ProfileCard from "@/components/me/ProfileCard";
+import SkillCard from "@/components/me/SkillCard";
+import CurrentChallenge from "@/components/me/CurrentChallenge";
+import NextMilestone from "@/components/me/NextMilestone";
+
+const skills = [
+  {
+    title: "Familie",
+    level: "Nivå 1",
+    description:
+      "Tilstedeværelse, omsorg og praktisk støtte hjemme.",
+  },
+  {
+    title: "Helse",
+    level: "Nivå 1",
+    description:
+      "Trening, søvn, energi og kroppen du ønsker å ha over tid.",
+  },
+  {
+    title: "Karriere",
+    level: "Nivå 1",
+    description:
+      "Partner-track, klientarbeid, faglig utvikling og synlighet.",
+  },
+  {
+    title: "Økonomi",
+    level: "Nivå 1",
+    description:
+      "Trygghet, sparing, investeringer og langsiktig handlingsrom.",
+  },
+];
 
 export default function MePage() {
   return (
@@ -13,25 +43,30 @@ export default function MePage() {
           </h1>
 
           <p className="mt-2 max-w-2xl text-stone-600">
-            Din personlige utvikling: nivå, XP, helse, karriere, økonomi,
-            milepæler og nåværende utfordringer.
+            Din personlige utvikling samlet på ett sted. Diskret inspirert av
+            spill, men laget for livet.
           </p>
         </section>
 
-        <Card>
-          <p className="text-sm font-medium text-[#8D846F]">
-            Kommer snart
-          </p>
+        <section className="grid grid-cols-1 gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+          <ProfileCard />
 
-          <h2 className="mt-2 text-2xl font-semibold text-[#24312A]">
-            Personlig oversikt
-          </h2>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            {skills.map((skill) => (
+              <SkillCard
+                key={skill.title}
+                title={skill.title}
+                level={skill.level}
+                description={skill.description}
+              />
+            ))}
+          </div>
+        </section>
 
-          <p className="mt-3 text-stone-600">
-            Her bygger vi senere karakterkort, oppdrag, XP, nivåer,
-            achievements og personlige mål.
-          </p>
-        </Card>
+        <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <CurrentChallenge />
+          <NextMilestone />
+        </section>
       </div>
     </AppShell>
   );
