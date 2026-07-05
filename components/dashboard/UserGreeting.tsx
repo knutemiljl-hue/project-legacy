@@ -30,14 +30,14 @@ export default function UserGreeting() {
   }, []);
 
   return (
-    <div className="flex items-center gap-5">
-      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-[2rem] border border-[#E2D8C7] bg-white shadow-sm ring-1 ring-black/5">
+    <div className="flex items-center gap-6">
+      <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-[2.25rem] border border-[#E2D8C7] bg-white shadow-sm ring-1 ring-black/5">
         <Image
           src={activeUser.avatar}
           alt={`Avatar for ${activeUser.name}`}
           fill
           priority
-          sizes="80px"
+          sizes="112px"
           className="object-cover"
         />
       </div>
@@ -45,7 +45,7 @@ export default function UserGreeting() {
       <div>
         <p className="text-sm font-medium text-[#8D846F]">Oversikt</p>
 
-        <h1 className="font-serif text-4xl font-semibold tracking-tight text-[#24312A]">
+        <h1 className="font-serif text-5xl font-semibold tracking-tight text-[#24312A]">
           Hei, {activeUser.name}.
         </h1>
       </div>
