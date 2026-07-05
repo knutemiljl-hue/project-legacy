@@ -290,9 +290,7 @@ function EventListButton({
         variant === "white" ? "hover:bg-[#F7F4EA]" : "hover:bg-white"
       } ${calendarOwnerBorderClasses[event.calendarOwner]} ${
         calendarOwnerSoftBackgroundClasses[event.calendarOwner]
-      } ${
-        index !== total - 1 ? "border-b border-b-[#ECE3D4]" : ""
-      }`}
+      } ${index !== total - 1 ? "border-b border-b-[#ECE3D4]" : ""}`}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
@@ -493,10 +491,17 @@ export default function FamilyCalendar({
 
   const todayKey = getLocalDateKey();
 
-  const upcomingEvents = events.filter((event) => event.date >= todayKey);
+  const sevenDaysFromToday = new Date();
+  sevenDaysFromToday.setDate(sevenDaysFromToday.getDate() + 7);
+  const sevenDaysFromTodayKey = getLocalDateKey(sevenDaysFromToday);
+
+  const upcomingEvents = events.filter(
+    (event) => event.date >= todayKey && event.date <= sevenDaysFromTodayKey
+  );
+
   const visibleUpcomingEvents = compact
     ? upcomingEvents.slice(0, 4)
-    : upcomingEvents.slice(0, 8);
+    : upcomingEvents;
 
   const eventsByDate = useMemo(() => groupEventsByDate(events), [events]);
   const calendarDays = useMemo(
@@ -544,7 +549,7 @@ export default function FamilyCalendar({
         </div>
 
         <div className="ml-15 w-fit rounded-2xl bg-[#F7F4EA] px-4 py-3 text-left sm:ml-0 sm:text-right">
-          <p className="text-xs text-stone-500">Kommende</p>
+          <p className="text-xs text-stone-500">Neste 7 dager</p>
           <p className="text-lg font-semibold text-[#24312A]">
             {upcomingEvents.length}
           </p>
@@ -597,7 +602,9 @@ export default function FamilyCalendar({
                 type="button"
                 onClick={goToPreviousPeriod}
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-[#24312A] shadow-sm transition hover:brightness-95"
-                aria-label={viewMode === "week" ? "Forrige uke" : "Forrige måned"}
+                aria-label={
+                  viewMode === "week" ? "Forrige uke" : "Forrige måned"
+                }
                 title={viewMode === "week" ? "Forrige uke" : "Forrige måned"}
               >
                 <ChevronLeft size={17} strokeWidth={2.25} />
@@ -837,7 +844,7 @@ export default function FamilyCalendar({
           <div>
             <div className="mb-3 flex items-center justify-between gap-4">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
-                Kommende avtaler
+                Kommende avtaler neste 7 dager
               </h3>
 
               <p className="text-xs text-stone-400">
@@ -848,7 +855,7 @@ export default function FamilyCalendar({
             {visibleUpcomingEvents.length === 0 ? (
               <div className="rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA] p-4">
                 <p className="text-sm leading-6 text-stone-600">
-                  Ingen kommende avtaler. Legg til en avtale via{" "}
+                  Ingen avtaler de neste 7 dagene. Legg til en avtale via{" "}
                   <strong>+ Ny</strong>.
                 </p>
               </div>
