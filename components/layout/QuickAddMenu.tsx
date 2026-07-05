@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-
-const CUSTOM_TASKS_KEY = "project-legacy-custom-daily-tasks";
+import { addShoppingItem } from "@/lib/shopping";
+import { getLocalDateKey, notifyTasksUpdated, readCustomTasks, saveCustomTasks } from "@/lib/tasks";
 
 const actions = [
   {
@@ -28,14 +28,6 @@ const actions = [
   },
 ];
 
-function getLocalDateKey(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
 export default function QuickAddMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -46,6 +38,8 @@ export default function QuickAddMenu() {
   const [taskDate, setTaskDate] = useState(getLocalDateKey());
   const [taskTime, setTaskTime] = useState("");
   const [taskScope, setTaskScope] = useState<"personal" | "family">("personal");
+
+  const [shoppingTitle, setShoppingTitle] = useState("");
 
   useEffect(() => {
     setIsMounted(true);
@@ -59,6 +53,7 @@ export default function QuickAddMenu() {
     setTaskDate(getLocalDateKey());
     setTaskTime("");
     setTaskScope("personal");
+    setShoppingTitle("");
   }
 
   function saveTask() {
@@ -66,8 +61,7 @@ export default function QuickAddMenu() {
       return;
     }
 
-    const storedTasks = window.localStorage.getItem(CUSTOM_TASKS_KEY);
-    const existingTasks = storedTasks ? JSON.parse(storedTasks) : [];
+    const existingTasks = readCustomTasks();
 
     const newTask = {
       id: `custom-${Date.now()}`,
@@ -77,13 +71,21 @@ export default function QuickAddMenu() {
       time: taskTime || "Hele dagen",
       scope: taskScope,
       done: false,
+      isCustom: true,
     };
 
-    const nextTasks = [...existingTasks, newTask];
+    saveCustomTasks([...existingTasks, newTask]);
+    notifyTasksUpdated();
 
-    window.localStorage.setItem(CUSTOM_TASKS_KEY, JSON.stringify(nextTasks));
-    window.dispatchEvent(new Event("project-legacy-tasks-updated"));
+    closeModal();
+  }
 
+  function saveShoppingItem() {
+    if (!shoppingTitle.trim()) {
+      return;
+    }
+
+    addShoppingItem(shoppingTitle);
     closeModal();
   }
 
@@ -108,7 +110,9 @@ export default function QuickAddMenu() {
                     <h2 className="mt-1 text-2xl font-semibold text-[#24312A]">
                       {activeAction === "task"
                         ? "Nytt gjøremål"
-                        : "Hva vil du opprette?"}
+                        : activeAction === "shopping"
+                          ? "Ny vare"
+                          : "Hva vil du opprette?"}
                     </h2>
                   </div>
 
@@ -246,25 +250,61 @@ export default function QuickAddMenu() {
                   </div>
                 )}
 
-                {activeAction && activeAction !== "task" && (
-                  <div className="rounded-2xl bg-[#F7F4EA] p-5">
-                    <p className="font-semibold text-[#24312A]">
-                      Kommer snart
-                    </p>
+                {activeAction === "shopping" && (
+                  <div className="space-y-4">
+                    <label className="block">
+                      <span className="text-sm font-medium text-[#24312A]">
+                        Vare
+                      </span>
 
-                    <p className="mt-2 text-sm leading-6 text-stone-600">
-                      Vi starter med gjøremål først. Denne funksjonen bygger vi
-                      senere.
-                    </p>
+                      <input
+                        value={shoppingTitle}
+                        onChange={(event) =>
+                          setShoppingTitle(event.target.value)
+                        }
+                        className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F]"
+                        placeholder="F.eks. melk, bleier eller kaffe"
+                      />
+                    </label>
 
-                    <button
-                      onClick={() => setActiveAction(null)}
-                      className="mt-5 rounded-2xl bg-white px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
-                    >
-                      Tilbake
-                    </button>
+                    <div className="flex justify-between gap-3 pt-2">
+                      <button
+                        onClick={() => setActiveAction(null)}
+                        className="rounded-2xl bg-[#F7F4EA] px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
+                      >
+                        Tilbake
+                      </button>
+
+                      <button
+                        onClick={saveShoppingItem}
+                        className="rounded-2xl bg-[#F3D66B] px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
+                      >
+                        Legg til vare
+                      </button>
+                    </div>
                   </div>
                 )}
+
+                {activeAction &&
+                  activeAction !== "task" &&
+                  activeAction !== "shopping" && (
+                    <div className="rounded-2xl bg-[#F7F4EA] p-5">
+                      <p className="font-semibold text-[#24312A]">
+                        Kommer snart
+                      </p>
+
+                      <p className="mt-2 text-sm leading-6 text-stone-600">
+                        Denne funksjonen bygger vi senere.
+                      </p>
+
+                      <button
+                        onClick={() => setActiveAction(null)}
+                        className="mt-5 rounded-2xl bg-white px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
+                      >
+                        Tilbake
+                      </button>
+                    </div>
+                  )}
               </div>
             </div>
           </div>,

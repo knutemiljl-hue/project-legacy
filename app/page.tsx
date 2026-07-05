@@ -3,6 +3,7 @@ import DailyTasks from "@/components/dashboard/DailyTasks";
 import FinanceSummary from "@/components/dashboard/FinanceSummary";
 import StatusCard from "@/components/dashboard/StatusCard";
 import UpcomingEvents from "@/components/dashboard/UpcomingEvents";
+import ShoppingList from "@/components/shopping/ShoppingList";
 import { statusCards } from "@/data/dashboard";
 
 export default function Home() {
@@ -32,6 +33,7 @@ export default function Home() {
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
           <DailyTasks />
+          <ShoppingList compact />
           <FinanceSummary />
         </div>
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import FamilyTasksSummary from "@/components/family/FamilyTasksSummary";
+import ShoppingList from "@/components/shopping/ShoppingList";
 
 const familyCards = [
   {
@@ -42,7 +43,10 @@ export default function FamilyPage() {
         </div>
       </section>
 
-      <FamilyTasksSummary />
+      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <FamilyTasksSummary />
+        <ShoppingList />
+      </section>
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {familyCards.map((card) => (
