@@ -104,6 +104,18 @@ export default function QuickAddMenu() {
     setIsMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
   function closeModal() {
     setIsOpen(false);
     setActiveAction(null);
@@ -179,13 +191,15 @@ export default function QuickAddMenu() {
       ? createPortal(
           <div
             onPointerUp={closeModal}
-            className="fixed inset-0 z-[999999] overflow-y-auto bg-black/75"
+            className="fixed inset-0 z-[999999] bg-black/70 sm:bg-black/75"
           >
-            <div className="flex min-h-screen items-start justify-center px-4 py-8 sm:px-6 sm:pt-36">
+            <div className="flex min-h-dvh items-end justify-center sm:items-start sm:px-6 sm:pt-28">
               <div
                 onPointerUp={(event) => event.stopPropagation()}
-                className="w-full max-w-xl rounded-3xl border border-stone-200 bg-white p-5 shadow-2xl sm:p-6"
+                className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[2rem] border border-stone-200 bg-white p-5 shadow-2xl sm:max-h-[82vh] sm:max-w-xl sm:rounded-3xl sm:p-6"
               >
+                <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-stone-200 sm:hidden" />
+
                 <div className="mb-6 flex items-start justify-between gap-4">
                   <div>
                     <p className="text-sm font-medium text-[#8D846F]">
@@ -242,7 +256,7 @@ export default function QuickAddMenu() {
                 )}
 
                 {activeAction === "task" && (
-                  <div className="space-y-4">
+                  <div className="space-y-4 pb-4 sm:pb-0">
                     <div>
                       <span className="text-sm font-medium text-[#24312A]">
                         Type oppgave
@@ -283,7 +297,7 @@ export default function QuickAddMenu() {
                       <input
                         value={taskTitle}
                         onChange={(event) => setTaskTitle(event.target.value)}
-                        className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F]"
+                        className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F] sm:text-sm"
                         placeholder="F.eks. Bestill dåpsgave"
                       />
                     </label>
@@ -298,7 +312,7 @@ export default function QuickAddMenu() {
                         onChange={(event) =>
                           setTaskSubtitle(event.target.value)
                         }
-                        className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F]"
+                        className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F] sm:text-sm"
                         placeholder="F.eks. Familie / praktisk"
                       />
                     </label>
@@ -313,7 +327,7 @@ export default function QuickAddMenu() {
                           type="date"
                           value={taskDate}
                           onChange={(event) => setTaskDate(event.target.value)}
-                          className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F]"
+                          className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition focus:border-[#8D846F] sm:text-sm"
                         />
                       </label>
 
@@ -326,12 +340,12 @@ export default function QuickAddMenu() {
                           type="time"
                           value={taskTime}
                           onChange={(event) => setTaskTime(event.target.value)}
-                          className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F]"
+                          className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition focus:border-[#8D846F] sm:text-sm"
                         />
                       </label>
                     </div>
 
-                    <div className="flex justify-between gap-3 pt-2">
+                    <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-between">
                       <button
                         type="button"
                         onPointerUp={() => setActiveAction(null)}
@@ -352,7 +366,7 @@ export default function QuickAddMenu() {
                 )}
 
                 {activeAction === "shopping" && (
-                  <div className="space-y-4">
+                  <div className="space-y-4 pb-4 sm:pb-0">
                     <label className="block">
                       <span className="text-sm font-medium text-[#24312A]">
                         Varer
@@ -363,7 +377,7 @@ export default function QuickAddMenu() {
                         onChange={(event) =>
                           setShoppingInput(event.target.value)
                         }
-                        className="mt-2 min-h-32 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F]"
+                        className="mt-2 min-h-36 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F] sm:min-h-32 sm:text-sm"
                         placeholder={`F.eks.\nMelk\nKaffe\nBleier\n\nEller: melk, kaffe, bleier`}
                       />
                     </label>
@@ -372,7 +386,7 @@ export default function QuickAddMenu() {
                       Skriv én vare per linje, eller skill dem med komma.
                     </p>
 
-                    <div className="flex justify-between gap-3 pt-2">
+                    <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-between">
                       <button
                         type="button"
                         onPointerUp={() => setActiveAction(null)}
@@ -393,7 +407,7 @@ export default function QuickAddMenu() {
                 )}
 
                 {activeAction === "calendar" && (
-                  <div className="space-y-4">
+                  <div className="space-y-4 pb-4 sm:pb-0">
                     <label className="block">
                       <span className="text-sm font-medium text-[#24312A]">
                         Tittel
@@ -404,7 +418,7 @@ export default function QuickAddMenu() {
                         onChange={(event) =>
                           setCalendarTitle(event.target.value)
                         }
-                        className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F]"
+                        className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F] sm:text-sm"
                         placeholder="F.eks. Helsestasjon"
                       />
                     </label>
@@ -421,7 +435,7 @@ export default function QuickAddMenu() {
                           onChange={(event) =>
                             setCalendarDate(event.target.value)
                           }
-                          className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F]"
+                          className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition focus:border-[#8D846F] sm:text-sm"
                         />
                       </label>
 
@@ -436,7 +450,7 @@ export default function QuickAddMenu() {
                           onChange={(event) =>
                             setCalendarTime(event.target.value)
                           }
-                          className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F]"
+                          className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition focus:border-[#8D846F] sm:text-sm"
                         />
                       </label>
                     </div>
@@ -451,7 +465,7 @@ export default function QuickAddMenu() {
                         onChange={(event) =>
                           setCalendarLocation(event.target.value)
                         }
-                        className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F]"
+                        className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F] sm:text-sm"
                         placeholder="F.eks. Bergen sentrum"
                       />
                     </label>
@@ -479,7 +493,7 @@ export default function QuickAddMenu() {
                       </div>
                     </div>
 
-                    <div className="flex justify-between gap-3 pt-2">
+                    <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-between">
                       <button
                         type="button"
                         onPointerUp={() => setActiveAction(null)}
