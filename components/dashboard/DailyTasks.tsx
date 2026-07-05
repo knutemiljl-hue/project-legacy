@@ -5,6 +5,7 @@ import { dailyTasks } from "@/data/dashboard";
 
 const COMPLETED_TASKS_KEY = "project-legacy-daily-tasks";
 const CUSTOM_TASKS_KEY = "project-legacy-custom-daily-tasks";
+const XP_PER_TASK = 5;
 
 type TaskScope = "personal" | "family";
 
@@ -126,9 +127,11 @@ function CompletedTasks({
   tasks: Task[];
   onUndoTask: (taskId: string) => void;
 }) {
+  const earnedXp = tasks.length * XP_PER_TASK;
+
   return (
     <div className="rounded-3xl border border-[#DDE8D4] bg-[#F4F8EF] p-5">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between gap-4">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-[#6F8F54]">
             Fullført i dag
@@ -139,11 +142,17 @@ function CompletedTasks({
               ? "Ingen fullførte oppgaver ennå"
               : `${tasks.length} oppgaver gjort`}
           </h3>
+
+          {tasks.length > 0 && (
+            <p className="mt-1 text-sm font-medium text-[#6F8F54]">
+              +{earnedXp} XP opptjent i dag
+            </p>
+          )}
         </div>
 
         {tasks.length > 0 && (
-          <div className="grid h-10 w-10 place-items-center rounded-full bg-[#8EB069] text-lg font-semibold text-white">
-            ✓
+          <div className="grid h-12 w-12 place-items-center rounded-full bg-[#8EB069] text-sm font-semibold text-white">
+            +{earnedXp}
           </div>
         )}
       </div>
@@ -170,6 +179,10 @@ function CompletedTasks({
                     </span>
 
                     <p className="font-medium text-[#24312A]">{task.title}</p>
+
+                    <span className="rounded-full bg-[#EEF5E8] px-2 py-1 text-xs font-semibold text-[#6F8F54]">
+                      +{XP_PER_TASK} XP
+                    </span>
                   </div>
 
                   <p className="mt-1 text-sm text-stone-500">
@@ -220,6 +233,8 @@ export default function DailyTasks() {
   const completedTaskItems = allTasks.filter((task) =>
     completedTasks.includes(task.id)
   );
+
+  const earnedXpToday = completedTaskItems.length * XP_PER_TASK;
 
   useEffect(() => {
     const storedCompletedTasks =
@@ -308,7 +323,7 @@ export default function DailyTasks() {
 
   return (
     <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <p className="text-sm font-medium text-[#8D846F]">
             Dagens oppdrag
@@ -319,9 +334,15 @@ export default function DailyTasks() {
           </h2>
         </div>
 
-        <p className="text-sm text-stone-500">
-          {completedTaskItems.length} fullført i dag
-        </p>
+        <div className="text-right">
+          <p className="text-sm text-stone-500">
+            {completedTaskItems.length} fullført i dag
+          </p>
+
+          <p className="mt-1 text-sm font-semibold text-[#6F8F54]">
+            +{earnedXpToday} XP
+          </p>
+        </div>
       </div>
 
       <div className="space-y-8">
@@ -341,10 +362,7 @@ export default function DailyTasks() {
           onDeleteTask={deleteTask}
         />
 
-        <CompletedTasks
-          tasks={completedTaskItems}
-          onUndoTask={toggleTask}
-        />
+        <CompletedTasks tasks={completedTaskItems} onUndoTask={toggleTask} />
       </div>
     </section>
   );
