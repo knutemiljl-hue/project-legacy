@@ -46,38 +46,44 @@ function TaskList({
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-[#8D846F]">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
           {title}
         </h3>
 
         <p className="text-xs text-stone-400">
-          {visibleTasks.length} åpne oppgaver
+          {visibleTasks.length} åpne
         </p>
       </div>
 
       {visibleTasks.length === 0 ? (
-        <div className="rounded-2xl bg-[#F7F4EA] p-4">
+        <div className="rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA] px-4 py-3">
           <p className="text-sm text-stone-500">Ingen åpne oppgaver her.</p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {visibleTasks.map((task) => {
+        <div className="overflow-hidden rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA]">
+          {visibleTasks.map((task, index) => {
             const formattedDate = formatTaskDate(task.date);
 
             return (
               <div
                 key={task.id}
-                className="flex w-full items-center justify-between rounded-2xl bg-[#F7F4EA] p-4 transition hover:brightness-95"
+                className={`flex w-full items-center justify-between gap-4 px-4 py-3 ${
+                  index !== visibleTasks.length - 1
+                    ? "border-b border-[#ECE3D4]"
+                    : ""
+                }`}
               >
                 <button
                   onClick={() => onToggleTask(task.id)}
                   className="flex flex-1 items-center gap-3 text-left"
                 >
-                  <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300" />
+                  <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white" />
 
                   <div>
                     <p className="font-medium text-[#24312A]">{task.title}</p>
-                    <p className="text-sm text-stone-500">{task.subtitle}</p>
+                    <p className="mt-1 text-sm text-stone-500">
+                      {task.subtitle}
+                    </p>
                   </div>
                 </button>
 
@@ -121,9 +127,9 @@ function CompletedTasks({
 
   return (
     <div className="rounded-3xl border border-[#DDE8D4] bg-[#F4F8EF] p-5">
-      <div className="mb-4 flex items-center justify-between gap-4">
+      <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-[#6F8F54]">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#6F8F54]">
             Fullført i dag
           </p>
 
@@ -141,26 +147,29 @@ function CompletedTasks({
         </div>
 
         {tasks.length > 0 && (
-          <div className="grid h-12 w-12 place-items-center rounded-full bg-[#8EB069] text-sm font-semibold text-white">
-            +{earnedXp}
+          <div className="rounded-full bg-[#8EB069] px-3 py-1 text-sm font-semibold text-white">
+            +{earnedXp} XP
           </div>
         )}
       </div>
 
       {tasks.length === 0 ? (
         <p className="text-sm leading-6 text-stone-600">
-          Når dere huker av oppgaver, samles de her i dag. I morgen flyttes de
-          automatisk til arkivet.
+          Når du huker av oppgaver, samles de her i dag.
         </p>
       ) : (
-        <div className="space-y-2">
-          {tasks.map((task) => {
+        <div className="overflow-hidden rounded-2xl bg-white/70">
+          {tasks.map((task, index) => {
             const formattedDate = formatTaskDate(task.date);
 
             return (
               <div
                 key={task.id}
-                className="flex items-center justify-between rounded-2xl bg-white/70 px-4 py-3"
+                className={`flex items-center justify-between gap-4 px-4 py-3 ${
+                  index !== tasks.length - 1
+                    ? "border-b border-[#E6EEDA]"
+                    : ""
+                }`}
               >
                 <div>
                   <div className="flex items-center gap-2">
@@ -170,7 +179,7 @@ function CompletedTasks({
 
                     <p className="font-medium text-[#24312A]">{task.title}</p>
 
-                    <span className="rounded-full bg-[#EEF5E8] px-2 py-1 text-xs font-semibold text-[#6F8F54]">
+                    <span className="rounded-full bg-[#F4F8EF] px-2 py-1 text-xs font-semibold text-[#6F8F54]">
                       +{XP_PER_TASK} XP
                     </span>
                   </div>
@@ -203,10 +212,10 @@ function TaskHistorySummary({ history }: { history: ArchivedTask[] }) {
   return (
     <Link
       href="/archive"
-      className="flex items-center justify-between gap-4 rounded-3xl border border-stone-200 bg-[#F7F4EA] px-5 py-4 transition hover:brightness-95"
+      className="flex items-center justify-between gap-4 rounded-3xl border border-[#ECE3D4] bg-[#F7F4EA] px-5 py-4 transition hover:brightness-95"
     >
       <div>
-        <p className="text-sm font-semibold uppercase tracking-wide text-[#8D846F]">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
           Arkiv
         </p>
 
@@ -406,16 +415,22 @@ export default function DailyTasks() {
   }
 
   return (
-    <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-[#8D846F]">
-            Dagens oppdrag
-          </p>
+    <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-6 shadow-sm ring-1 ring-black/5">
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-lg text-[#4F773D]">
+            ✓
+          </div>
 
-          <h2 className="mt-1 text-2xl font-semibold text-[#24312A]">
-            {openTasks.length} åpne oppdrag
-          </h2>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
+              Dagens oppdrag
+            </p>
+
+            <h2 className="mt-1 text-2xl font-semibold text-[#24312A]">
+              {openTasks.length} åpne oppdrag
+            </h2>
+          </div>
         </div>
 
         <div className="text-right">
@@ -429,7 +444,7 @@ export default function DailyTasks() {
         </div>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-6">
         <TaskList
           title="Egne oppgaver"
           tasks={personalTasks}
