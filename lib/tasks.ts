@@ -5,6 +5,7 @@ export const XP_PER_TASK = 5;
 export const XP_PER_LEVEL = 500;
 
 export type TaskScope = "personal" | "family";
+export type TaskCategory = "task" | "purchase";
 
 export type Task = {
   id: string;
@@ -13,6 +14,7 @@ export type Task = {
   date?: string;
   time: string;
   scope: TaskScope;
+  category: TaskCategory;
   done: boolean;
   isCustom: boolean;
   createdBy?: LegacyUserId;
@@ -36,6 +38,7 @@ export type ArchivedTask = {
   date?: string;
   time: string;
   scope: TaskScope;
+  category: TaskCategory;
   completedAt: string;
   xp: number;
   createdBy?: LegacyUserId;
@@ -56,6 +59,7 @@ export type TaskInput = {
   date?: string;
   time?: string;
   scope: TaskScope;
+  category?: TaskCategory;
 };
 
 type TaskRow = {
@@ -65,6 +69,7 @@ type TaskRow = {
   task_date: string | null;
   task_time: string | null;
   scope: TaskScope;
+  task_category: TaskCategory | null;
   is_done: boolean;
   is_archived: boolean;
   created_by: LegacyUserId | null;
@@ -83,6 +88,7 @@ function mapTask(row: TaskRow): Task {
     date: row.task_date ?? undefined,
     time: row.task_time || "Hele dagen",
     scope: row.scope,
+    category: row.task_category ?? "task",
     done: row.is_done,
     isCustom: true,
     createdBy: row.created_by ?? undefined,
@@ -138,6 +144,14 @@ export function isTaskForToday(task: Pick<Task, "date">) {
   return task.date === getTodayKey();
 }
 
+export function isRegularTask(task: Pick<Task, "category">) {
+  return task.category === "task";
+}
+
+export function isPurchaseTask(task: Pick<Task, "category">) {
+  return task.category === "purchase";
+}
+
 export function formatTaskDate(date?: string) {
   if (!date) {
     return null;
@@ -157,6 +171,10 @@ export function getScopeLabel(scope: TaskScope) {
   return scope === "family" ? "Familie" : "Egen";
 }
 
+export function getTaskCategoryLabel(category: TaskCategory) {
+  return category === "purchase" ? "Større oppgave" : "Vanlig oppgave";
+}
+
 export function createDefaultTasks(_tasks: DashboardTask[]): Task[] {
   return [];
 }
@@ -165,7 +183,7 @@ export async function readTasks(): Promise<Task[]> {
   const { data, error } = await supabase
     .from("legacy_tasks")
     .select(
-      "id, title, subtitle, task_date, task_time, scope, is_done, is_archived, created_by, completed_by, completed_at, archived_at, xp, created_at"
+      "id, title, subtitle, task_date, task_time, scope, task_category, is_done, is_archived, created_by, completed_by, completed_at, archived_at, xp, created_at"
     )
     .eq("is_archived", false)
     .order("created_at", { ascending: true });
@@ -182,7 +200,7 @@ export async function readArchivedTasks(): Promise<ArchivedTask[]> {
   const { data, error } = await supabase
     .from("legacy_tasks")
     .select(
-      "id, title, subtitle, task_date, task_time, scope, is_done, is_archived, created_by, completed_by, completed_at, archived_at, xp, created_at"
+      "id, title, subtitle, task_date, task_time, scope, task_category, is_done, is_archived, created_by, completed_by, completed_at, archived_at, xp, created_at"
     )
     .eq("is_archived", true)
     .order("archived_at", { ascending: false });
@@ -203,6 +221,7 @@ export async function readArchivedTasks(): Promise<ArchivedTask[]> {
       date: task.date,
       time: task.time,
       scope: task.scope,
+      category: task.category,
       completedAt: task.completedAt as string,
       xp: task.xp,
       createdBy: task.createdBy,
@@ -214,7 +233,7 @@ export async function readCompletedTasks(): Promise<Task[]> {
   const { data, error } = await supabase
     .from("legacy_tasks")
     .select(
-      "id, title, subtitle, task_date, task_time, scope, is_done, is_archived, created_by, completed_by, completed_at, archived_at, xp, created_at"
+      "id, title, subtitle, task_date, task_time, scope, task_category, is_done, is_archived, created_by, completed_by, completed_at, archived_at, xp, created_at"
     )
     .eq("is_done", true)
     .order("completed_at", { ascending: false });
@@ -238,10 +257,15 @@ export async function addTask(input: TaskInput) {
 
   const { error } = await supabase.from("legacy_tasks").insert({
     title,
-    subtitle: input.subtitle?.trim() || "Egendefinert oppgave",
+    subtitle:
+      input.subtitle?.trim() ||
+      (input.category === "purchase"
+        ? "Større oppgave"
+        : "Egendefinert oppgave"),
     task_date: input.date || null,
     task_time: input.time || "Hele dagen",
     scope: input.scope,
+    task_category: input.category ?? "task",
     is_done: false,
     is_archived: false,
     created_by: activeUser.id,

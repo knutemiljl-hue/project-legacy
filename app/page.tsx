@@ -2,6 +2,7 @@ import FamilyCalendar from "@/components/calendar/FamilyCalendar";
 import CharacterSummary from "@/components/dashboard/CharacterSummary";
 import DailyTasks from "@/components/dashboard/DailyTasks";
 import FinanceSummary from "@/components/dashboard/FinanceSummary";
+import LargeTasksSummary from "@/components/dashboard/LargeTasksSummary";
 import UserGreeting from "@/components/dashboard/UserGreeting";
 import ShoppingList from "@/components/shopping/ShoppingList";
 
@@ -20,14 +21,18 @@ export default function Home() {
         </div>
 
         <div className="order-3 xl:order-4">
-          <FamilyCalendar compact />
+          <LargeTasksSummary />
         </div>
 
         <div className="order-4 xl:order-5">
+          <FamilyCalendar compact />
+        </div>
+
+        <div className="order-5 xl:order-6">
           <FinanceSummary />
         </div>
 
-        <div className="order-5 xl:order-2">
+        <div className="order-6 xl:order-2">
           <CharacterSummary />
         </div>
       </section>

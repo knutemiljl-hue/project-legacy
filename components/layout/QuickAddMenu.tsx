@@ -15,13 +15,13 @@ import {
   getLocalDateKey as getCalendarDateKey,
 } from "@/lib/calendar";
 import { addShoppingItems } from "@/lib/shopping";
-import { addTask, getLocalDateKey } from "@/lib/tasks";
+import { TaskCategory, addTask, getLocalDateKey } from "@/lib/tasks";
 
 const actions = [
   {
     id: "task",
     title: "Nytt gjøremål",
-    description: "Legg til en oppgave for deg eller familien.",
+    description: "Legg til en vanlig eller større oppgave.",
     icon: CheckCircle2,
   },
   {
@@ -48,30 +48,12 @@ const calendarTypes: {
   id: CalendarEventType;
   label: string;
 }[] = [
-  {
-    id: "family",
-    label: "Familie",
-  },
-  {
-    id: "health",
-    label: "Helse",
-  },
-  {
-    id: "home",
-    label: "Hjem",
-  },
-  {
-    id: "work",
-    label: "Arbeid",
-  },
-  {
-    id: "social",
-    label: "Sosialt",
-  },
-  {
-    id: "other",
-    label: "Annet",
-  },
+  { id: "family", label: "Familie" },
+  { id: "health", label: "Helse" },
+  { id: "home", label: "Hjem" },
+  { id: "work", label: "Arbeid" },
+  { id: "social", label: "Sosialt" },
+  { id: "other", label: "Annet" },
 ];
 
 export default function QuickAddMenu() {
@@ -84,6 +66,7 @@ export default function QuickAddMenu() {
   const [taskDate, setTaskDate] = useState(getLocalDateKey());
   const [taskTime, setTaskTime] = useState("");
   const [taskScope, setTaskScope] = useState<"personal" | "family">("personal");
+  const [taskCategory, setTaskCategory] = useState<TaskCategory>("task");
 
   const [shoppingInput, setShoppingInput] = useState("");
 
@@ -119,6 +102,7 @@ export default function QuickAddMenu() {
     setTaskDate(getLocalDateKey());
     setTaskTime("");
     setTaskScope("personal");
+    setTaskCategory("task");
 
     setShoppingInput("");
 
@@ -140,6 +124,7 @@ export default function QuickAddMenu() {
       date: taskDate,
       time: taskTime,
       scope: taskScope,
+      category: taskCategory,
     });
 
     closeModal();
@@ -243,6 +228,38 @@ export default function QuickAddMenu() {
                   <div className="space-y-4 pb-4 sm:pb-0">
                     <div>
                       <span className="text-sm font-medium text-[#24312A]">
+                        Kategori
+                      </span>
+
+                      <div className="mt-2 grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onPointerUp={() => setTaskCategory("task")}
+                          className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
+                            taskCategory === "task"
+                              ? "border-[#8EB069] bg-[#EEF5E8] text-[#24312A]"
+                              : "border-stone-200 bg-[#F7F4EA] text-stone-500 hover:brightness-95"
+                          }`}
+                        >
+                          Vanlig oppgave
+                        </button>
+
+                        <button
+                          type="button"
+                          onPointerUp={() => setTaskCategory("purchase")}
+                          className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
+                            taskCategory === "purchase"
+                              ? "border-[#8EB069] bg-[#EEF5E8] text-[#24312A]"
+                              : "border-stone-200 bg-[#F7F4EA] text-stone-500 hover:brightness-95"
+                          }`}
+                        >
+                          Større oppgave
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-sm font-medium text-[#24312A]">
                         Type oppgave
                       </span>
 
@@ -256,7 +273,7 @@ export default function QuickAddMenu() {
                               : "border-stone-200 bg-[#F7F4EA] text-stone-500 hover:brightness-95"
                           }`}
                         >
-                          Egen oppgave
+                          Egen
                         </button>
 
                         <button
@@ -268,7 +285,7 @@ export default function QuickAddMenu() {
                               : "border-stone-200 bg-[#F7F4EA] text-stone-500 hover:brightness-95"
                           }`}
                         >
-                          Familieoppgave
+                          Familie
                         </button>
                       </div>
                     </div>
@@ -282,7 +299,11 @@ export default function QuickAddMenu() {
                         value={taskTitle}
                         onChange={(event) => setTaskTitle(event.target.value)}
                         className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F] sm:text-sm"
-                        placeholder="F.eks. Bestill dåpsgave"
+                        placeholder={
+                          taskCategory === "purchase"
+                            ? "F.eks. Kjøpe stellebord eller ordne barnerom"
+                            : "F.eks. Bestill dåpsgave"
+                        }
                       />
                     </label>
 
@@ -297,7 +318,11 @@ export default function QuickAddMenu() {
                           setTaskSubtitle(event.target.value)
                         }
                         className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F] sm:text-sm"
-                        placeholder="F.eks. Familie / praktisk"
+                        placeholder={
+                          taskCategory === "purchase"
+                            ? "F.eks. Litt større ting som må følges opp"
+                            : "F.eks. Familie / praktisk"
+                        }
                       />
                     </label>
 
@@ -343,7 +368,7 @@ export default function QuickAddMenu() {
                         onPointerUp={saveTask}
                         className="rounded-2xl bg-[#3F6F35] px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:brightness-110"
                       >
-                        Lagre gjøremål
+                        Lagre
                       </button>
                     </div>
                   </div>

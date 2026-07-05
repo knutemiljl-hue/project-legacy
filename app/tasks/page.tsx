@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 import {
-  CalendarClock,
   Check,
   CheckCircle2,
   Circle,
   Clock,
+  PackageCheck,
   RotateCcw,
+  ShoppingBag,
   Trash2,
 } from "lucide-react";
 import {
@@ -16,6 +17,7 @@ import {
   formatTaskDate,
   getDateKey,
   getScopeLabel,
+  getTaskCategoryLabel,
   getTodayKey,
   isTaskForToday,
   readTasks,
@@ -136,6 +138,10 @@ function TaskRow({
               {getScopeLabel(task.scope)}
             </span>
 
+            <span className="rounded-full bg-white px-2 py-1 text-xs font-medium text-[#8D846F]">
+              {getTaskCategoryLabel(task.category)}
+            </span>
+
             {task.done && isOwnCompletion && (
               <span className="rounded-full bg-[#F4F8EF] px-2 py-1 text-xs font-semibold text-[#6F8F54]">
                 +{task.xp} XP
@@ -196,6 +202,7 @@ function TaskSection({
   tasks,
   activeUserId,
   emptyText,
+  icon,
   onToggleTask,
   onDeleteTask,
 }: {
@@ -204,12 +211,17 @@ function TaskSection({
   tasks: Task[];
   activeUserId: LegacyUserId;
   emptyText: string;
+  icon: React.ReactNode;
   onToggleTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
 }) {
   return (
     <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-4 shadow-sm ring-1 ring-black/5 sm:p-6">
-      <div className="mb-5 flex items-start justify-between gap-4">
+      <div className="mb-5 flex items-start gap-4">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-[#4F773D]">
+          {icon}
+        </div>
+
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
             {title}
@@ -331,12 +343,21 @@ export default function TasksBoard() {
     isVisibleForActiveUser(task, activeUserId)
   );
 
+  const regularTasks = visibleTasks.filter((task) => task.category === "task");
+  const largeTasks = visibleTasks.filter(
+    (task) => task.category === "purchase"
+  );
+
   const todaysOpenTasks = sortTasksByDateAndTime(
-    visibleTasks.filter((task) => isTaskForToday(task) && !task.done)
+    regularTasks.filter((task) => isTaskForToday(task) && !task.done)
   );
 
   const futureOpenTasks = sortTasksByDateAndTime(
-    visibleTasks.filter((task) => isFutureTask(task) && !task.done)
+    regularTasks.filter((task) => isFutureTask(task) && !task.done)
+  );
+
+  const openLargeTasks = sortTasksByDateAndTime(
+    largeTasks.filter((task) => !task.done)
   );
 
   const completedToday = sortTasksByDateAndTime(
@@ -372,12 +393,12 @@ export default function TasksBoard() {
             </h1>
 
             <p className="mt-3 max-w-2xl text-sm leading-6 text-stone-600 sm:text-base">
-              Her ligger både dagens og fremtidige oppgaver. Fremtidige
-              oppgaver kan krysses av når de faktisk er gjort.
+              Her ligger dagens oppgaver, fremtidige planer og større ting som
+              skal kjøpes, avklares eller følges opp.
             </p>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-4 gap-3">
             <div className="rounded-2xl bg-[#F7F4EA] px-4 py-3 text-center">
               <p className="text-xs text-stone-500">I dag</p>
               <p className="mt-1 text-xl font-semibold text-[#24312A]">
@@ -393,6 +414,13 @@ export default function TasksBoard() {
             </div>
 
             <div className="rounded-2xl bg-[#F7F4EA] px-4 py-3 text-center">
+              <p className="text-xs text-stone-500">Store ting</p>
+              <p className="mt-1 text-xl font-semibold text-[#24312A]">
+                {isLoading ? "–" : openLargeTasks.length}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-[#F7F4EA] px-4 py-3 text-center">
               <p className="text-xs text-stone-500">XP i dag</p>
               <p className="mt-1 text-xl font-semibold text-[#24312A]">
                 {isLoading ? "–" : earnedXpToday}
@@ -404,57 +432,47 @@ export default function TasksBoard() {
 
       <TaskSection
         title="I dag"
-        description="Oppgaver som gjelder i dag, eller oppgaver uten bestemt dato."
+        description="Vanlige oppgaver som gjelder i dag, eller oppgaver uten bestemt dato."
         tasks={todaysOpenTasks}
         activeUserId={activeUserId}
         emptyText="Ingen åpne oppgaver for i dag."
+        icon={<CheckCircle2 size={21} strokeWidth={2} />}
         onToggleTask={handleToggleTask}
         onDeleteTask={handleDeleteTask}
       />
 
       <TaskSection
         title="Fremtidige"
-        description="Planlagte oppgaver fremover. Kryss dem av allerede nå hvis de blir gjort tidlig."
+        description="Planlagte vanlige oppgaver fremover. Kryss dem av allerede nå hvis de blir gjort tidlig."
         tasks={futureOpenTasks}
         activeUserId={activeUserId}
         emptyText="Ingen fremtidige oppgaver."
+        icon={<Clock size={21} strokeWidth={2} />}
+        onToggleTask={handleToggleTask}
+        onDeleteTask={handleDeleteTask}
+      />
+
+      <TaskSection
+        title="Store ting / innkjøp"
+        description="Større ting som skal kjøpes, avklares eller følges opp. Dette er adskilt fra vanlig handleliste."
+        tasks={openLargeTasks}
+        activeUserId={activeUserId}
+        emptyText="Ingen store ting eller innkjøp lagt inn."
+        icon={<ShoppingBag size={21} strokeWidth={2} />}
         onToggleTask={handleToggleTask}
         onDeleteTask={handleDeleteTask}
       />
 
       <TaskSection
         title="Fullført i dag"
-        description="Oppgaver som er fullført i dag. XP vises bare for den som faktisk fullførte oppgaven."
+        description="Vanlige oppgaver og større ting som er fullført i dag. XP vises bare for den som faktisk fullførte."
         tasks={completedToday}
         activeUserId={activeUserId}
         emptyText="Ingen fullførte oppgaver i dag."
+        icon={<PackageCheck size={21} strokeWidth={2} />}
         onToggleTask={handleToggleTask}
         onDeleteTask={handleDeleteTask}
       />
-
-      <section className="rounded-3xl border border-dashed border-[#D7CBB9] bg-white/45 p-5 sm:p-6">
-        <div className="flex items-start gap-4">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-[#4F773D]">
-            <CalendarClock size={21} strokeWidth={2} />
-          </div>
-
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
-              Neste forbedring
-            </p>
-
-            <h2 className="mt-1 text-xl font-semibold text-[#24312A]">
-              Store ting / innkjøp
-            </h2>
-
-            <p className="mt-2 text-sm leading-6 text-stone-600">
-              Neste steg er å legge til egen kategori for store innkjøp, slik at
-              større kjøp ikke blandes med daglige gjøremål eller vanlig
-              handleliste.
-            </p>
-          </div>
-        </div>
-      </section>
     </main>
   );
 }
