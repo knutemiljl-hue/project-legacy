@@ -17,6 +17,21 @@ import {
   readTaskHistory,
 } from "@/lib/tasks";
 
+const levelNames = [
+  "Novise",
+  "Vandrer",
+  "Speider",
+  "Vokter",
+  "Strateg",
+  "Banebryter",
+  "Helt",
+  "Legende",
+  "Arving",
+  "Legacy",
+];
+
+const MAX_LEVEL = levelNames.length;
+
 type XpTask = {
   id: string;
   title: string;
@@ -34,35 +49,29 @@ type XpSummary = {
 };
 
 function getLevel(totalXp: number) {
-  return Math.floor(totalXp / XP_PER_LEVEL) + 1;
+  const calculatedLevel = Math.floor(totalXp / XP_PER_LEVEL) + 1;
+
+  return Math.min(calculatedLevel, MAX_LEVEL);
 }
 
 function getCurrentLevelXp(totalXp: number) {
+  if (getLevel(totalXp) >= MAX_LEVEL) {
+    return XP_PER_LEVEL;
+  }
+
   return totalXp % XP_PER_LEVEL;
 }
 
 function getXpToNextLevel(totalXp: number) {
+  if (getLevel(totalXp) >= MAX_LEVEL) {
+    return 0;
+  }
+
   return XP_PER_LEVEL - getCurrentLevelXp(totalXp);
 }
 
 function getLevelTitle(level: number) {
-  if (level <= 1) {
-    return "Starten";
-  }
-
-  if (level <= 3) {
-    return "Rytme";
-  }
-
-  if (level <= 6) {
-    return "Stabilitet";
-  }
-
-  if (level <= 10) {
-    return "Momentum";
-  }
-
-  return "Legacy";
+  return levelNames[level - 1] ?? "Legacy";
 }
 
 function getTaskById(tasks: Task[], taskId: string) {
@@ -169,6 +178,7 @@ export default function CharacterSummary() {
   const xpToNextLevel = getXpToNextLevel(summary.totalXp);
   const progressPercentage = Math.round((currentLevelXp / XP_PER_LEVEL) * 100);
   const levelTitle = getLevelTitle(level);
+  const hasReachedMaxLevel = level >= MAX_LEVEL;
 
   useEffect(() => {
     function updateXp() {
@@ -198,7 +208,7 @@ export default function CharacterSummary() {
 
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
-              Kapittel I
+              XP
             </p>
 
             <h2 className="mt-1 text-2xl font-semibold text-[#24312A]">
@@ -234,7 +244,11 @@ export default function CharacterSummary() {
         </div>
 
         <p className="mt-2 text-xs text-stone-500">
-          {xpToNextLevel} XP igjen til nivå {level + 1}.
+          {hasReachedMaxLevel
+            ? "Maksnivå nådd for v1."
+            : `${xpToNextLevel} XP igjen til nivå ${level + 1}: ${
+                levelNames[level] ?? "Neste nivå"
+              }.`}
         </p>
       </div>
 
