@@ -4,12 +4,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
-  BookOpen,
   CalendarDays,
   CheckCircle2,
   Home,
   Leaf,
-  Settings,
   Sprout,
   Users,
 } from "lucide-react";
@@ -20,8 +18,6 @@ const navigationItems = [
   { label: "Gjøremål", href: "/tasks", icon: CheckCircle2 },
   { label: "Kalender", href: "/calendar", icon: CalendarDays },
   { label: "Familien", href: "/family", icon: Users },
-  { label: "Journal", href: "/journal", icon: BookOpen },
-  { label: "Innstillinger", href: "/settings", icon: Settings },
 ];
 
 export default function Sidebar() {
