@@ -10,26 +10,19 @@ import {
   RotateCcw,
   Trash2,
 } from "lucide-react";
-import { dailyTasks } from "@/data/dashboard";
 import {
   ArchivedTask,
-  CompletionRecord,
   Task,
-  XP_PER_TASK,
-  createDefaultTasks,
+  deleteTask,
   formatTaskDate,
   getDateKey,
   getScopeLabel,
   getTodayKey,
   isTaskForToday,
-  notifyXpUpdated,
-  readCompletionRecords,
-  readCustomTasks,
-  readStoredCompletedTaskIds,
-  readTaskHistory,
-  saveCompletionRecords,
-  saveCustomTasks,
-  saveTaskHistory,
+  readArchivedTasks,
+  readTasks,
+  subscribeToTasks,
+  toggleTaskCompleted,
 } from "@/lib/tasks";
 import {
   LegacyUserId,
@@ -49,6 +42,18 @@ function CreatedByText({ createdBy }: { createdBy?: string }) {
   );
 }
 
+function CompletedByText({ completedBy }: { completedBy?: string }) {
+  if (!completedBy) {
+    return null;
+  }
+
+  return (
+    <span className="text-xs text-stone-400">
+      · Fullført av {getUserDisplayName(completedBy)}
+    </span>
+  );
+}
+
 function isVisibleForActiveUser(task: Task, activeUserId: LegacyUserId) {
   if (task.scope === "family") {
     return true;
@@ -64,21 +69,15 @@ function isVisibleForActiveUser(task: Task, activeUserId: LegacyUserId) {
 function TaskList({
   title,
   tasks,
-  completedRecords,
   onToggleTask,
   onDeleteTask,
 }: {
   title: string;
   tasks: Task[];
-  completedRecords: CompletionRecord[];
-  onToggleTask: (taskId: string) => void;
+  onToggleTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
 }) {
-  const completedTaskIds = completedRecords.map((record) => record.taskId);
-
-  const visibleTasks = tasks.filter(
-    (task) => isTaskForToday(task) && !completedTaskIds.includes(task.id)
-  );
+  const visibleTasks = tasks.filter((task) => isTaskForToday(task) && !task.done);
 
   return (
     <div>
@@ -109,7 +108,8 @@ function TaskList({
                 }`}
               >
                 <button
-                  onClick={() => onToggleTask(task.id)}
+                  type="button"
+                  onClick={() => onToggleTask(task)}
                   className="flex flex-1 items-start gap-3 text-left sm:items-center"
                 >
                   <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white text-stone-300 sm:mt-0">
@@ -118,6 +118,7 @@ function TaskList({
 
                   <div className="min-w-0">
                     <p className="font-medium text-[#24312A]">{task.title}</p>
+
                     <p className="mt-1 text-sm leading-5 text-stone-500">
                       {task.subtitle}
                       <CreatedByText createdBy={task.createdBy} />
@@ -134,16 +135,15 @@ function TaskList({
                     <p className="text-sm text-stone-500">{task.time}</p>
                   </div>
 
-                  {task.isCustom && (
-                    <button
-                      onClick={() => onDeleteTask(task.id)}
-                      className="grid h-8 w-8 place-items-center rounded-full text-stone-400 transition hover:bg-white hover:text-red-600"
-                      aria-label={`Slett ${task.title}`}
-                      title="Slett oppgave"
-                    >
-                      <Trash2 size={15} strokeWidth={2} />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => onDeleteTask(task.id)}
+                    className="grid h-8 w-8 place-items-center rounded-full text-stone-400 transition hover:bg-white hover:text-red-600"
+                    aria-label={`Slett ${task.title}`}
+                    title="Slett oppgave"
+                  >
+                    <Trash2 size={15} strokeWidth={2} />
+                  </button>
                 </div>
               </div>
             );
@@ -156,12 +156,18 @@ function TaskList({
 
 function CompletedTasks({
   tasks,
+  activeUserId,
   onUndoTask,
 }: {
   tasks: Task[];
-  onUndoTask: (taskId: string) => void;
+  activeUserId: LegacyUserId;
+  onUndoTask: (task: Task) => void;
 }) {
-  const earnedXp = tasks.length * XP_PER_TASK;
+  const ownCompletedTasks = tasks.filter(
+    (task) => task.completedBy === activeUserId
+  );
+
+  const earnedXp = ownCompletedTasks.reduce((sum, task) => sum + task.xp, 0);
 
   return (
     <div className="rounded-3xl border border-[#DDE8D4] bg-[#F4F8EF] p-4 sm:p-5">
@@ -177,14 +183,14 @@ function CompletedTasks({
               : `${tasks.length} oppgaver gjort`}
           </h3>
 
-          {tasks.length > 0 && (
+          {earnedXp > 0 && (
             <p className="mt-1 text-sm font-medium text-[#6F8F54]">
-              +{earnedXp} XP opptjent i dag
+              +{earnedXp} XP opptjent av deg i dag
             </p>
           )}
         </div>
 
-        {tasks.length > 0 && (
+        {earnedXp > 0 && (
           <div className="w-fit rounded-full bg-[#8EB069] px-3 py-1 text-sm font-semibold text-white">
             +{earnedXp} XP
           </div>
@@ -199,6 +205,7 @@ function CompletedTasks({
         <div className="overflow-hidden rounded-2xl bg-white/70">
           {tasks.map((task, index) => {
             const formattedDate = formatTaskDate(task.date);
+            const isOwnCompletion = task.completedBy === activeUserId;
 
             return (
               <div
@@ -217,9 +224,11 @@ function CompletedTasks({
 
                     <p className="font-medium text-[#24312A]">{task.title}</p>
 
-                    <span className="rounded-full bg-[#F4F8EF] px-2 py-1 text-xs font-semibold text-[#6F8F54]">
-                      +{XP_PER_TASK} XP
-                    </span>
+                    {isOwnCompletion && (
+                      <span className="rounded-full bg-[#F4F8EF] px-2 py-1 text-xs font-semibold text-[#6F8F54]">
+                        +{task.xp} XP
+                      </span>
+                    )}
                   </div>
 
                   <p className="mt-1 text-sm leading-5 text-stone-500">
@@ -227,11 +236,13 @@ function CompletedTasks({
                     {formattedDate ? ` · ${formattedDate}` : ""}
                     {task.time ? ` · ${task.time}` : ""}
                     <CreatedByText createdBy={task.createdBy} />
+                    <CompletedByText completedBy={task.completedBy} />
                   </p>
                 </div>
 
                 <button
-                  onClick={() => onUndoTask(task.id)}
+                  type="button"
+                  onClick={() => onUndoTask(task)}
                   className="flex w-fit items-center gap-1 rounded-full bg-[#F7F4EA] px-3 py-1 text-xs font-medium text-[#24312A] transition hover:brightness-95"
                 >
                   <RotateCcw size={12} strokeWidth={2} />
@@ -285,23 +296,16 @@ function TaskHistorySummary({ history }: { history: ArchivedTask[] }) {
 }
 
 export default function DailyTasks() {
-  const [completionRecords, setCompletionRecords] = useState<
-    CompletionRecord[]
-  >([]);
-  const [customTasks, setCustomTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [taskHistory, setTaskHistory] = useState<ArchivedTask[]>([]);
   const [activeUserId, setActiveUserId] = useState<LegacyUserId>("knut");
+  const [isLoading, setIsLoading] = useState(true);
 
-  const defaultTasks = createDefaultTasks(dailyTasks);
-  const allTasks: Task[] = [...defaultTasks, ...customTasks];
-
-  const visibleTasksForUser = allTasks.filter((task) =>
+  const visibleTasksForUser = tasks.filter((task) =>
     isVisibleForActiveUser(task, activeUserId)
   );
 
   const todayTasks = visibleTasksForUser.filter((task) => isTaskForToday(task));
-
-  const completedTaskIds = completionRecords.map((record) => record.taskId);
 
   const personalTasks = visibleTasksForUser.filter(
     (task) => task.scope === "personal"
@@ -311,37 +315,46 @@ export default function DailyTasks() {
     (task) => task.scope === "family"
   );
 
-  const openTasks = todayTasks.filter(
-    (task) => !completedTaskIds.includes(task.id)
+  const openTasks = todayTasks.filter((task) => !task.done);
+
+  const completedTaskItems = todayTasks.filter((task) => {
+    if (!task.done || !task.completedAt) {
+      return false;
+    }
+
+    return getDateKey(new Date(task.completedAt)) === getTodayKey();
+  });
+
+  const completedByActiveUserToday = completedTaskItems.filter(
+    (task) => task.completedBy === activeUserId
   );
 
-  const completedTaskItems = todayTasks.filter((task) =>
-    completedTaskIds.includes(task.id)
+  const earnedXpToday = completedByActiveUserToday.reduce(
+    (sum, task) => sum + task.xp,
+    0
   );
-
-  const earnedXpToday = completedTaskItems.length * XP_PER_TASK;
 
   useEffect(() => {
-    initializeTasks();
+    loadData();
     updateActiveUser();
 
-    window.addEventListener("project-legacy-tasks-updated", loadCustomTasks);
+    const unsubscribeFromTasks = subscribeToTasks(loadData);
+
     window.addEventListener(
       "project-legacy-active-user-updated",
       updateActiveUser
     );
-    window.addEventListener("storage", updateActiveUser);
+    window.addEventListener("project-legacy-tasks-updated", loadData);
+    window.addEventListener("focus", loadData);
 
     return () => {
-      window.removeEventListener(
-        "project-legacy-tasks-updated",
-        loadCustomTasks
-      );
+      unsubscribeFromTasks();
       window.removeEventListener(
         "project-legacy-active-user-updated",
         updateActiveUser
       );
-      window.removeEventListener("storage", updateActiveUser);
+      window.removeEventListener("project-legacy-tasks-updated", loadData);
+      window.removeEventListener("focus", loadData);
     };
   }, []);
 
@@ -349,142 +362,48 @@ export default function DailyTasks() {
     setActiveUserId(readActiveUser().id);
   }
 
-  function initializeTasks() {
-    const loadedCustomTasks = readCustomTasks();
-    const loadedHistory = readTaskHistory();
+  async function loadData() {
+    setIsLoading(true);
 
-    const storedCompletionRecords = readCompletionRecords();
-    const storedCompletedTaskIds = readStoredCompletedTaskIds();
+    const [nextTasks, nextHistory] = await Promise.all([
+      readTasks(),
+      readArchivedTasks(),
+    ]);
 
-    let records: CompletionRecord[] = [];
-
-    if (storedCompletionRecords.length > 0) {
-      records = storedCompletionRecords;
-    } else if (storedCompletedTaskIds.length > 0) {
-      records = storedCompletedTaskIds.map((taskId) => ({
-        taskId,
-        completedAt: new Date().toISOString(),
-        xp: XP_PER_TASK,
-      }));
-    } else {
-      records = dailyTasks
-        .filter((task) => task.done)
-        .map((task) => ({
-          taskId: task.id,
-          completedAt: new Date().toISOString(),
-          xp: XP_PER_TASK,
-        }));
-    }
-
-    const todayKey = getTodayKey();
-
-    const todayRecords = records.filter(
-      (record) => getDateKey(new Date(record.completedAt)) === todayKey
-    );
-
-    const oldRecords = records.filter(
-      (record) => getDateKey(new Date(record.completedAt)) !== todayKey
-    );
-
-    const allTasksForArchive = [
-      ...createDefaultTasks(dailyTasks),
-      ...loadedCustomTasks,
-    ];
-
-    const archivedTasks: ArchivedTask[] = oldRecords
-      .map((record) => {
-        const task = allTasksForArchive.find(
-          (item) => item.id === record.taskId
-        );
-
-        if (!task) {
-          return null;
-        }
-
-        return {
-          id: `${record.taskId}-${record.completedAt}`,
-          taskId: record.taskId,
-          title: task.title,
-          subtitle: task.subtitle,
-          date: task.date,
-          time: task.time,
-          scope: task.scope,
-          completedAt: record.completedAt,
-          xp: record.xp,
-          createdBy: task.createdBy,
-        };
-      })
-      .filter(Boolean) as ArchivedTask[];
-
-    const existingHistoryIds = new Set(
-      loadedHistory.map((task) => `${task.taskId}-${task.completedAt}`)
-    );
-
-    const newArchivedTasks = archivedTasks.filter(
-      (task) => !existingHistoryIds.has(`${task.taskId}-${task.completedAt}`)
-    );
-
-    const nextHistory = [...loadedHistory, ...newArchivedTasks];
-
-    const archivedTaskIds = new Set(oldRecords.map((record) => record.taskId));
-
-    const remainingCustomTasks = loadedCustomTasks.filter(
-      (task) => !archivedTaskIds.has(task.id)
-    );
-
-    saveTaskHistory(nextHistory);
-    saveCustomTasks(remainingCustomTasks);
-    saveCompletionRecords(todayRecords);
-
-    setCustomTasks(remainingCustomTasks);
-    setCompletionRecords(todayRecords);
+    setTasks(nextTasks);
     setTaskHistory(nextHistory);
-
-    notifyXpUpdated();
+    setIsLoading(false);
   }
 
-  function loadCustomTasks() {
-    setCustomTasks(readCustomTasks());
+  async function handleToggleTask(task: Task) {
+    const activeUser = readActiveUser();
+
+    setTasks((currentTasks) =>
+      currentTasks.map((currentTask) =>
+        currentTask.id === task.id
+          ? {
+              ...currentTask,
+              done: !currentTask.done,
+              completedBy: !currentTask.done ? activeUser.id : undefined,
+              completedAt: !currentTask.done
+                ? new Date().toISOString()
+                : undefined,
+            }
+          : currentTask
+      )
+    );
+
+    await toggleTaskCompleted(task);
+    await loadData();
   }
 
-  function toggleTask(taskId: string) {
-    setCompletionRecords((currentRecords) => {
-      const isCompleted = currentRecords.some(
-        (record) => record.taskId === taskId
-      );
+  async function handleDeleteTask(taskId: string) {
+    setTasks((currentTasks) =>
+      currentTasks.filter((task) => task.id !== taskId)
+    );
 
-      const nextRecords = isCompleted
-        ? currentRecords.filter((record) => record.taskId !== taskId)
-        : [
-            ...currentRecords,
-            {
-              taskId,
-              completedAt: new Date().toISOString(),
-              xp: XP_PER_TASK,
-            },
-          ];
-
-      saveCompletionRecords(nextRecords);
-
-      return nextRecords;
-    });
-  }
-
-  function deleteTask(taskId: string) {
-    const nextCustomTasks = customTasks.filter((task) => task.id !== taskId);
-
-    setCustomTasks(nextCustomTasks);
-    saveCustomTasks(nextCustomTasks);
-
-    setCompletionRecords((currentRecords) => {
-      const nextRecords = currentRecords.filter(
-        (record) => record.taskId !== taskId
-      );
-
-      saveCompletionRecords(nextRecords);
-
-      return nextRecords;
-    });
+    await deleteTask(taskId);
+    await loadData();
   }
 
   return (
@@ -501,14 +420,16 @@ export default function DailyTasks() {
             </p>
 
             <h2 className="mt-1 text-2xl font-semibold text-[#24312A]">
-              {openTasks.length} åpne oppdrag
+              {isLoading
+                ? "Henter oppgaver …"
+                : `${openTasks.length} åpne oppdrag`}
             </h2>
           </div>
         </div>
 
         <div className="ml-15 text-left sm:ml-0 sm:text-right">
           <p className="text-sm text-stone-500">
-            {completedTaskItems.length} fullført i dag
+            {completedByActiveUserToday.length} fullført av deg i dag
           </p>
 
           <p className="mt-1 text-sm font-semibold text-[#6F8F54]">
@@ -521,20 +442,22 @@ export default function DailyTasks() {
         <TaskList
           title="Egne oppgaver"
           tasks={personalTasks}
-          completedRecords={completionRecords}
-          onToggleTask={toggleTask}
-          onDeleteTask={deleteTask}
+          onToggleTask={handleToggleTask}
+          onDeleteTask={handleDeleteTask}
         />
 
         <TaskList
           title="Familieoppgaver"
           tasks={familyTasks}
-          completedRecords={completionRecords}
-          onToggleTask={toggleTask}
-          onDeleteTask={deleteTask}
+          onToggleTask={handleToggleTask}
+          onDeleteTask={handleDeleteTask}
         />
 
-        <CompletedTasks tasks={completedTaskItems} onUndoTask={toggleTask} />
+        <CompletedTasks
+          tasks={completedTaskItems}
+          activeUserId={activeUserId}
+          onUndoTask={handleToggleTask}
+        />
 
         <TaskHistorySummary history={taskHistory} />
       </div>

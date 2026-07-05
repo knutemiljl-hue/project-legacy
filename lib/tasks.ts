@@ -1,9 +1,5 @@
-import { LegacyUserId } from "@/lib/users";
-
-export const COMPLETED_TASKS_KEY = "project-legacy-daily-tasks";
-export const CUSTOM_TASKS_KEY = "project-legacy-custom-daily-tasks";
-export const COMPLETION_RECORDS_KEY = "project-legacy-task-completions";
-export const TASK_HISTORY_KEY = "project-legacy-task-history";
+import { supabase } from "@/lib/supabase";
+import { LegacyUserId, readActiveUser } from "@/lib/users";
 
 export const XP_PER_TASK = 5;
 export const XP_PER_LEVEL = 500;
@@ -20,6 +16,10 @@ export type Task = {
   done: boolean;
   isCustom: boolean;
   createdBy?: LegacyUserId;
+  completedBy?: LegacyUserId;
+  completedAt?: string;
+  archivedAt?: string;
+  xp: number;
 };
 
 export type CompletionRecord = {
@@ -39,6 +39,7 @@ export type ArchivedTask = {
   completedAt: string;
   xp: number;
   createdBy?: LegacyUserId;
+  completedBy?: LegacyUserId;
 };
 
 export type DashboardTask = {
@@ -49,54 +50,63 @@ export type DashboardTask = {
   done: boolean;
 };
 
-function canUseStorage() {
-  return typeof window !== "undefined";
-}
+export type TaskInput = {
+  title: string;
+  subtitle?: string;
+  date?: string;
+  time?: string;
+  scope: TaskScope;
+};
 
-function readJson<T>(key: string, fallback: T): T {
-  if (!canUseStorage()) {
-    return fallback;
-  }
+type TaskRow = {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  task_date: string | null;
+  task_time: string | null;
+  scope: TaskScope;
+  is_done: boolean;
+  is_archived: boolean;
+  created_by: LegacyUserId | null;
+  completed_by: LegacyUserId | null;
+  completed_at: string | null;
+  archived_at: string | null;
+  xp: number | null;
+  created_at: string;
+};
 
-  const storedValue = window.localStorage.getItem(key);
-
-  if (!storedValue) {
-    return fallback;
-  }
-
-  try {
-    return JSON.parse(storedValue) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-function writeJson<T>(key: string, value: T) {
-  if (!canUseStorage()) {
-    return;
-  }
-
-  window.localStorage.setItem(key, JSON.stringify(value));
+function mapTask(row: TaskRow): Task {
+  return {
+    id: row.id,
+    title: row.title,
+    subtitle: row.subtitle || "Egendefinert oppgave",
+    date: row.task_date ?? undefined,
+    time: row.task_time || "Hele dagen",
+    scope: row.scope,
+    done: row.is_done,
+    isCustom: true,
+    createdBy: row.created_by ?? undefined,
+    completedBy: row.completed_by ?? undefined,
+    completedAt: row.completed_at ?? undefined,
+    archivedAt: row.archived_at ?? undefined,
+    xp: row.xp ?? XP_PER_TASK,
+  };
 }
 
 export function notifyXpUpdated() {
-  if (!canUseStorage()) {
+  if (typeof window === "undefined") {
     return;
   }
 
-  window.setTimeout(() => {
-    window.dispatchEvent(new Event("project-legacy-xp-updated"));
-  }, 0);
+  window.dispatchEvent(new Event("project-legacy-xp-updated"));
 }
 
 export function notifyTasksUpdated() {
-  if (!canUseStorage()) {
+  if (typeof window === "undefined") {
     return;
   }
 
-  window.setTimeout(() => {
-    window.dispatchEvent(new Event("project-legacy-tasks-updated"));
-  }, 0);
+  window.dispatchEvent(new Event("project-legacy-tasks-updated"));
 }
 
 export function notifyTaskAndXpUpdates() {
@@ -120,11 +130,7 @@ export function getTodayKey() {
   return getLocalDateKey();
 }
 
-export function isTaskForToday(task: Pick<Task, "date" | "isCustom">) {
-  if (!task.isCustom) {
-    return true;
-  }
-
+export function isTaskForToday(task: Pick<Task, "date">) {
   if (!task.date) {
     return true;
   }
@@ -151,70 +157,191 @@ export function getScopeLabel(scope: TaskScope) {
   return scope === "family" ? "Familie" : "Egen";
 }
 
-export function createDefaultTasks(tasks: DashboardTask[]): Task[] {
-  return tasks.map((task) => ({
-    id: task.id,
-    title: task.title,
-    subtitle: task.subtitle,
-    time: task.time,
-    scope: "personal",
-    done: task.done,
-    isCustom: false,
-  }));
+export function createDefaultTasks(_tasks: DashboardTask[]): Task[] {
+  return [];
 }
 
-export function readCustomTasks(): Task[] {
-  const parsedTasks = readJson<Partial<Task>[]>(CUSTOM_TASKS_KEY, []);
+export async function readTasks(): Promise<Task[]> {
+  const { data, error } = await supabase
+    .from("legacy_tasks")
+    .select(
+      "id, title, subtitle, task_date, task_time, scope, is_done, is_archived, created_by, completed_by, completed_at, archived_at, xp, created_at"
+    )
+    .eq("is_archived", false)
+    .order("created_at", { ascending: true });
 
-  return parsedTasks.map((task) => ({
-    id: task.id ?? `custom-${Date.now()}`,
-    title: task.title ?? "Uten tittel",
-    subtitle: task.subtitle ?? "Egendefinert oppgave",
-    date: task.date,
-    time: task.time ?? "Hele dagen",
-    scope: task.scope ?? "personal",
-    done: task.done ?? false,
-    isCustom: true,
-    createdBy: task.createdBy,
-  }));
+  if (error) {
+    console.error("Kunne ikke hente oppgaver:", error);
+    return [];
+  }
+
+  return (data ?? []).map((task) => mapTask(task as TaskRow));
 }
 
-export function saveCustomTasks(tasks: Task[]) {
-  writeJson(CUSTOM_TASKS_KEY, tasks);
+export async function readArchivedTasks(): Promise<ArchivedTask[]> {
+  const { data, error } = await supabase
+    .from("legacy_tasks")
+    .select(
+      "id, title, subtitle, task_date, task_time, scope, is_done, is_archived, created_by, completed_by, completed_at, archived_at, xp, created_at"
+    )
+    .eq("is_archived", true)
+    .order("archived_at", { ascending: false });
+
+  if (error) {
+    console.error("Kunne ikke hente arkiverte oppgaver:", error);
+    return [];
+  }
+
+  return (data ?? [])
+    .map((task) => mapTask(task as TaskRow))
+    .filter((task) => task.completedAt)
+    .map((task) => ({
+      id: task.id,
+      taskId: task.id,
+      title: task.title,
+      subtitle: task.subtitle,
+      date: task.date,
+      time: task.time,
+      scope: task.scope,
+      completedAt: task.completedAt as string,
+      xp: task.xp,
+      createdBy: task.createdBy,
+      completedBy: task.completedBy,
+    }));
 }
 
-export function readCompletionRecords(): CompletionRecord[] {
-  return readJson<CompletionRecord[]>(COMPLETION_RECORDS_KEY, []);
+export async function readCompletedTasks(): Promise<Task[]> {
+  const { data, error } = await supabase
+    .from("legacy_tasks")
+    .select(
+      "id, title, subtitle, task_date, task_time, scope, is_done, is_archived, created_by, completed_by, completed_at, archived_at, xp, created_at"
+    )
+    .eq("is_done", true)
+    .order("completed_at", { ascending: false });
+
+  if (error) {
+    console.error("Kunne ikke hente fullførte oppgaver:", error);
+    return [];
+  }
+
+  return (data ?? []).map((task) => mapTask(task as TaskRow));
 }
 
-export function readStoredCompletedTaskIds(): string[] {
-  return readJson<string[]>(COMPLETED_TASKS_KEY, []);
+export async function addTask(input: TaskInput) {
+  const title = input.title.trim();
+
+  if (!title) {
+    return;
+  }
+
+  const activeUser = readActiveUser();
+
+  const { error } = await supabase.from("legacy_tasks").insert({
+    title,
+    subtitle: input.subtitle?.trim() || "Egendefinert oppgave",
+    task_date: input.date || null,
+    task_time: input.time || "Hele dagen",
+    scope: input.scope,
+    is_done: false,
+    is_archived: false,
+    created_by: activeUser.id,
+    completed_by: null,
+    completed_at: null,
+    xp: XP_PER_TASK,
+  });
+
+  if (error) {
+    console.error("Kunne ikke legge til oppgave:", error);
+    return;
+  }
+
+  notifyTaskAndXpUpdates();
 }
 
-export function saveCompletionRecords(records: CompletionRecord[]) {
-  writeJson(COMPLETION_RECORDS_KEY, records);
-  writeJson(
-    COMPLETED_TASKS_KEY,
-    records.map((record) => record.taskId)
-  );
+export async function toggleTaskCompleted(task: Task) {
+  const activeUser = readActiveUser();
+  const nextDone = !task.done;
 
-  notifyXpUpdated();
+  const { error } = await supabase
+    .from("legacy_tasks")
+    .update({
+      is_done: nextDone,
+      completed_by: nextDone ? activeUser.id : null,
+      completed_at: nextDone ? new Date().toISOString() : null,
+      xp: XP_PER_TASK,
+    })
+    .eq("id", task.id);
+
+  if (error) {
+    console.error("Kunne ikke oppdatere oppgave:", error);
+    return;
+  }
+
+  notifyTaskAndXpUpdates();
 }
 
-export function readTaskHistory(): ArchivedTask[] {
-  return readJson<ArchivedTask[]>(TASK_HISTORY_KEY, []);
+export async function deleteTask(taskId: string) {
+  const { error } = await supabase.from("legacy_tasks").delete().eq("id", taskId);
+
+  if (error) {
+    console.error("Kunne ikke slette oppgave:", error);
+    return;
+  }
+
+  notifyTaskAndXpUpdates();
 }
 
-export function saveTaskHistory(history: ArchivedTask[]) {
-  writeJson(TASK_HISTORY_KEY, history);
+export async function archiveCompletedTask(taskId: string) {
+  const { error } = await supabase
+    .from("legacy_tasks")
+    .update({
+      is_archived: true,
+      archived_at: new Date().toISOString(),
+    })
+    .eq("id", taskId)
+    .eq("is_done", true);
+
+  if (error) {
+    console.error("Kunne ikke arkivere oppgave:", error);
+    return;
+  }
+
+  notifyTaskAndXpUpdates();
 }
 
-export function readTotalXp() {
-  const completions = readCompletionRecords();
-  const history = readTaskHistory();
+export async function readTotalXp(userId?: LegacyUserId) {
+  const completedTasks = await readCompletedTasks();
 
-  const todayXp = completions.reduce((sum, record) => sum + record.xp, 0);
-  const historyXp = history.reduce((sum, task) => sum + task.xp, 0);
+  return completedTasks
+    .filter((task) => {
+      if (!userId) {
+        return true;
+      }
 
-  return todayXp + historyXp;
+      return task.completedBy === userId;
+    })
+    .reduce((sum, task) => sum + task.xp, 0);
+}
+
+export function subscribeToTasks(onChange: () => void) {
+  const channelName = `legacy-tasks-${crypto.randomUUID()}`;
+
+  const channel = supabase
+    .channel(channelName)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "legacy_tasks",
+      },
+      () => {
+        onChange();
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }

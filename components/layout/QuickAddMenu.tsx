@@ -15,13 +15,7 @@ import {
   getLocalDateKey as getCalendarDateKey,
 } from "@/lib/calendar";
 import { addShoppingItems } from "@/lib/shopping";
-import {
-  getLocalDateKey,
-  notifyTasksUpdated,
-  readCustomTasks,
-  saveCustomTasks,
-} from "@/lib/tasks";
-import { readActiveUser } from "@/lib/users";
+import { addTask, getLocalDateKey } from "@/lib/tasks";
 
 const actions = [
   {
@@ -135,47 +129,37 @@ export default function QuickAddMenu() {
     setCalendarType("family");
   }
 
-  function saveTask() {
+  async function saveTask() {
     if (!taskTitle.trim()) {
       return;
     }
 
-    const activeUser = readActiveUser();
-    const existingTasks = readCustomTasks();
-
-    const newTask = {
-      id: `custom-${Date.now()}`,
-      title: taskTitle.trim(),
-      subtitle: taskSubtitle.trim() || "Egendefinert oppgave",
+    await addTask({
+      title: taskTitle,
+      subtitle: taskSubtitle,
       date: taskDate,
-      time: taskTime || "Hele dagen",
+      time: taskTime,
       scope: taskScope,
-      done: false,
-      isCustom: true,
-      createdBy: activeUser.id,
-    };
-
-    saveCustomTasks([...existingTasks, newTask]);
-    notifyTasksUpdated();
+    });
 
     closeModal();
   }
 
-  function saveShoppingItems() {
+  async function saveShoppingItems() {
     if (!shoppingInput.trim()) {
       return;
     }
 
-    addShoppingItems(shoppingInput);
+    await addShoppingItems(shoppingInput);
     closeModal();
   }
 
-  function saveCalendarEvent() {
+  async function saveCalendarEvent() {
     if (!calendarTitle.trim()) {
       return;
     }
 
-    addCalendarEvent({
+    await addCalendarEvent({
       title: calendarTitle,
       date: calendarDate,
       time: calendarTime,

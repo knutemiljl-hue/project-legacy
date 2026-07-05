@@ -2,20 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
-import { dailyTasks } from "@/data/dashboard";
 import {
-  ArchivedTask,
-  CompletionRecord,
   Task,
   XP_PER_LEVEL,
-  createDefaultTasks,
   getDateKey,
   getScopeLabel,
   getTodayKey,
-  readCompletionRecords,
-  readCustomTasks,
-  readTaskHistory,
+  readCompletedTasks,
+  subscribeToTasks,
 } from "@/lib/tasks";
+import { LegacyUserId, readActiveUser } from "@/lib/users";
 
 const levelNames = [
   "Novise",
@@ -32,20 +28,12 @@ const levelNames = [
 
 const MAX_LEVEL = levelNames.length;
 
-type XpTask = {
-  id: string;
-  title: string;
-  scope: "personal" | "family";
-  xp: number;
-  completedAt: string;
-};
-
 type XpSummary = {
   totalXp: number;
   todayXp: number;
   completedToday: number;
   completedTotal: number;
-  recentTasks: XpTask[];
+  recentTasks: Task[];
 };
 
 function getLevel(totalXp: number) {
@@ -74,83 +62,40 @@ function getLevelTitle(level: number) {
   return levelNames[level - 1] ?? "Legacy";
 }
 
-function getTaskById(tasks: Task[], taskId: string) {
-  return tasks.find((task) => task.id === taskId);
-}
+async function readXpSummary(activeUserId: LegacyUserId): Promise<XpSummary> {
+  const completedTasks = await readCompletedTasks();
 
-function mapCompletionToXpTask({
-  record,
-  tasks,
-}: {
-  record: CompletionRecord;
-  tasks: Task[];
-}): XpTask | null {
-  const task = getTaskById(tasks, record.taskId);
-
-  if (!task) {
-    return null;
-  }
-
-  return {
-    id: `${record.taskId}-${record.completedAt}`,
-    title: task.title,
-    scope: task.scope,
-    xp: record.xp,
-    completedAt: record.completedAt,
-  };
-}
-
-function mapHistoryToXpTask(task: ArchivedTask): XpTask {
-  return {
-    id: `${task.taskId}-${task.completedAt}`,
-    title: task.title,
-    scope: task.scope,
-    xp: task.xp,
-    completedAt: task.completedAt,
-  };
-}
-
-function readXpSummary(): XpSummary {
-  const defaultTasks = createDefaultTasks(dailyTasks);
-  const customTasks = readCustomTasks();
-  const allActiveTasks = [...defaultTasks, ...customTasks];
-
-  const completionRecords = readCompletionRecords();
-  const taskHistory = readTaskHistory();
+  const ownCompletedTasks = completedTasks.filter(
+    (task) => task.completedBy === activeUserId
+  );
 
   const todayKey = getTodayKey();
 
-  const todayXpTasks = completionRecords
-    .map((record) =>
-      mapCompletionToXpTask({
-        record,
-        tasks: allActiveTasks,
-      })
-    )
-    .filter(Boolean) as XpTask[];
+  const todayTasks = ownCompletedTasks.filter((task) => {
+    if (!task.completedAt) {
+      return false;
+    }
 
-  const archivedXpTasks = taskHistory.map(mapHistoryToXpTask);
+    return getDateKey(new Date(task.completedAt)) === todayKey;
+  });
 
-  const allXpTasks = [...todayXpTasks, ...archivedXpTasks];
+  const totalXp = ownCompletedTasks.reduce((sum, task) => sum + task.xp, 0);
+  const todayXp = todayTasks.reduce((sum, task) => sum + task.xp, 0);
 
-  const totalXp = allXpTasks.reduce((sum, task) => sum + task.xp, 0);
-
-  const todayXp = todayXpTasks
-    .filter((task) => getDateKey(new Date(task.completedAt)) === todayKey)
-    .reduce((sum, task) => sum + task.xp, 0);
-
-  const recentTasks = [...allXpTasks]
+  const recentTasks = ownCompletedTasks
+    .filter((task) => task.completedAt)
     .sort(
       (a, b) =>
-        new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
+        new Date(b.completedAt as string).getTime() -
+        new Date(a.completedAt as string).getTime()
     )
     .slice(0, 2);
 
   return {
     totalXp,
     todayXp,
-    completedToday: todayXpTasks.length,
-    completedTotal: allXpTasks.length,
+    completedToday: todayTasks.length,
+    completedTotal: ownCompletedTasks.length,
     recentTasks,
   };
 }
@@ -165,6 +110,7 @@ function formatCompletedTime(completedAt: string) {
 }
 
 export default function CharacterSummary() {
+  const [activeUserId, setActiveUserId] = useState<LegacyUserId>("knut");
   const [summary, setSummary] = useState<XpSummary>({
     totalXp: 0,
     todayXp: 0,
@@ -181,22 +127,48 @@ export default function CharacterSummary() {
   const hasReachedMaxLevel = level >= MAX_LEVEL;
 
   useEffect(() => {
-    function updateXp() {
-      setSummary(readXpSummary());
-    }
+    updateActiveUserAndXp();
 
-    updateXp();
+    const unsubscribeFromTasks = subscribeToTasks(updateActiveUserAndXp);
 
-    window.addEventListener("project-legacy-xp-updated", updateXp);
-    window.addEventListener("project-legacy-tasks-updated", updateXp);
-    window.addEventListener("storage", updateXp);
+    window.addEventListener(
+      "project-legacy-active-user-updated",
+      updateActiveUserAndXp
+    );
+    window.addEventListener("project-legacy-xp-updated", updateActiveUserAndXp);
+    window.addEventListener(
+      "project-legacy-tasks-updated",
+      updateActiveUserAndXp
+    );
+    window.addEventListener("focus", updateActiveUserAndXp);
 
     return () => {
-      window.removeEventListener("project-legacy-xp-updated", updateXp);
-      window.removeEventListener("project-legacy-tasks-updated", updateXp);
-      window.removeEventListener("storage", updateXp);
+      unsubscribeFromTasks();
+      window.removeEventListener(
+        "project-legacy-active-user-updated",
+        updateActiveUserAndXp
+      );
+      window.removeEventListener(
+        "project-legacy-xp-updated",
+        updateActiveUserAndXp
+      );
+      window.removeEventListener(
+        "project-legacy-tasks-updated",
+        updateActiveUserAndXp
+      );
+      window.removeEventListener("focus", updateActiveUserAndXp);
     };
   }, []);
+
+  async function updateActiveUserAndXp() {
+    const activeUser = readActiveUser();
+
+    setActiveUserId(activeUser.id);
+
+    const nextSummary = await readXpSummary(activeUser.id);
+
+    setSummary(nextSummary);
+  }
 
   return (
     <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-5 shadow-sm ring-1 ring-black/5">
@@ -297,7 +269,7 @@ export default function CharacterSummary() {
 
                   <p className="mt-1 text-xs text-stone-500">
                     {getScopeLabel(task.scope)} ·{" "}
-                    {formatCompletedTime(task.completedAt)}
+                    {formatCompletedTime(task.completedAt as string)}
                   </p>
                 </div>
 
