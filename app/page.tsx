@@ -2,9 +2,7 @@ import FamilyCalendar from "@/components/calendar/FamilyCalendar";
 import CharacterSummary from "@/components/dashboard/CharacterSummary";
 import DailyTasks from "@/components/dashboard/DailyTasks";
 import FinanceSummary from "@/components/dashboard/FinanceSummary";
-import StatusCard from "@/components/dashboard/StatusCard";
 import ShoppingList from "@/components/shopping/ShoppingList";
-import { statusCards } from "@/data/dashboard";
 
 export default function Home() {
   return (
@@ -19,27 +17,16 @@ export default function Home() {
         </p>
       </div>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {statusCards.map((card) => (
-          <StatusCard
-            key={card.title}
-            title={card.title}
-            value={card.value}
-            subtitle={card.subtitle}
-          />
-        ))}
-      </section>
-
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.6fr_1fr]">
         <div className="space-y-6">
-          <DailyTasks />
           <ShoppingList compact />
+          <DailyTasks />
           <FinanceSummary />
         </div>
 
         <div className="space-y-6">
-          <FamilyCalendar compact />
           <CharacterSummary />
+          <FamilyCalendar compact />
         </div>
       </section>
     </main>
