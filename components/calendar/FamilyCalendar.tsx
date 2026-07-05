@@ -276,8 +276,8 @@ export default function FamilyCalendar({
   );
 
   return (
-    <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-6 shadow-sm ring-1 ring-black/5">
-      <div className="mb-5 flex items-start justify-between gap-4">
+    <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-4 shadow-sm ring-1 ring-black/5 sm:p-6">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
           <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-[#4F773D]">
             <CalendarDays size={21} strokeWidth={2} />
@@ -301,7 +301,7 @@ export default function FamilyCalendar({
           </div>
         </div>
 
-        <div className="rounded-2xl bg-[#F7F4EA] px-4 py-3 text-right">
+        <div className="ml-15 w-fit rounded-2xl bg-[#F7F4EA] px-4 py-3 text-left sm:ml-0 sm:text-right">
           <p className="text-xs text-stone-500">Kommende</p>
           <p className="text-lg font-semibold text-[#24312A]">
             {upcomingEvents.length}
@@ -310,19 +310,19 @@ export default function FamilyCalendar({
       </div>
 
       <div className="space-y-5">
-        <div className="rounded-3xl border border-[#ECE3D4] bg-[#F7F4EA] p-4">
+        <div className="rounded-3xl border border-[#ECE3D4] bg-[#F7F4EA] p-3 sm:p-4">
           <div className="mb-4 flex items-center justify-between gap-3">
             <button
               onClick={goToPreviousMonth}
-              className="grid h-9 w-9 place-items-center rounded-full bg-white text-[#24312A] shadow-sm transition hover:brightness-95"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-[#24312A] shadow-sm transition hover:brightness-95"
               aria-label="Forrige måned"
               title="Forrige måned"
             >
               <ChevronLeft size={17} strokeWidth={2.25} />
             </button>
 
-            <button onClick={goToToday} className="text-center">
-              <p className="text-sm font-semibold capitalize text-[#24312A]">
+            <button onClick={goToToday} className="min-w-0 text-center">
+              <p className="truncate text-sm font-semibold capitalize text-[#24312A]">
                 {formatCalendarMonth(visibleMonth)}
               </p>
 
@@ -331,7 +331,7 @@ export default function FamilyCalendar({
 
             <button
               onClick={goToNextMonth}
-              className="grid h-9 w-9 place-items-center rounded-full bg-white text-[#24312A] shadow-sm transition hover:brightness-95"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-[#24312A] shadow-sm transition hover:brightness-95"
               aria-label="Neste måned"
               title="Neste måned"
             >
@@ -343,7 +343,7 @@ export default function FamilyCalendar({
             {weekDays.map((day) => (
               <div
                 key={day}
-                className="py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-[#8D846F]"
+                className="py-1 text-center text-[10px] font-semibold uppercase tracking-wide text-[#8D846F] sm:py-2 sm:text-[11px]"
               >
                 {day}
               </div>
@@ -360,7 +360,7 @@ export default function FamilyCalendar({
                 <button
                   key={day.date}
                   onClick={() => setSelectedDate(day.date)}
-                  className={`min-h-12 rounded-2xl p-2 text-left transition hover:bg-white ${
+                  className={`min-h-11 rounded-2xl p-1.5 text-left transition hover:bg-white sm:min-h-12 sm:p-2 ${
                     isSelected
                       ? "bg-white shadow-sm ring-2 ring-[#8EB069]"
                       : "bg-transparent"
@@ -385,7 +385,7 @@ export default function FamilyCalendar({
                   </div>
 
                   {!compact && dayEvents.length > 0 && (
-                    <div className="mt-1 space-y-1">
+                    <div className="mt-1 hidden space-y-1 sm:block">
                       {dayEvents.slice(0, 2).map((event) => (
                         <div
                           key={event.id}
@@ -414,7 +414,7 @@ export default function FamilyCalendar({
               </h3>
             </div>
 
-            <p className="rounded-full bg-white px-3 py-1 text-xs font-medium text-stone-500">
+            <p className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-medium text-stone-500">
               {selectedDateEvents.length} avtaler
             </p>
           </div>
@@ -431,14 +431,14 @@ export default function FamilyCalendar({
                 <button
                   key={event.id}
                   onClick={() => openEditModal(event)}
-                  className={`w-full px-4 py-3 text-left transition hover:bg-[#F7F4EA] ${
+                  className={`w-full px-4 py-4 text-left transition hover:bg-[#F7F4EA] sm:py-3 ${
                     index !== selectedDateEvents.length - 1
                       ? "border-b border-[#ECE3D4]"
                       : ""
                   }`}
                 >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-medium text-[#24312A]">
                           {event.title}
@@ -449,7 +449,7 @@ export default function FamilyCalendar({
                         </span>
                       </div>
 
-                      <p className="mt-1 flex flex-wrap items-center gap-1 text-sm text-stone-500">
+                      <p className="mt-1 flex flex-wrap items-center gap-1 text-sm leading-5 text-stone-500">
                         <Clock size={13} strokeWidth={2} />
                         {event.time}
 
@@ -465,7 +465,7 @@ export default function FamilyCalendar({
                       </p>
                     </div>
 
-                    <p className="flex items-center gap-1 text-xs font-medium text-stone-400">
+                    <p className="flex w-fit items-center gap-1 text-xs font-medium text-stone-400">
                       <Edit3 size={12} strokeWidth={2} />
                       Rediger
                     </p>
@@ -509,14 +509,14 @@ export default function FamilyCalendar({
                       )
                     );
                   }}
-                  className={`w-full px-4 py-3 text-left transition hover:bg-white ${
+                  className={`w-full px-4 py-4 text-left transition hover:bg-white sm:py-3 ${
                     index !== visibleUpcomingEvents.length - 1
                       ? "border-b border-[#ECE3D4]"
                       : ""
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-medium text-[#24312A]">
                           {event.title}
@@ -527,13 +527,13 @@ export default function FamilyCalendar({
                         </span>
                       </div>
 
-                      <p className="mt-1 text-sm text-stone-500">
+                      <p className="mt-1 text-sm leading-5 text-stone-500">
                         {formatCalendarDate(event.date)}
                         <CreatedByText createdBy={event.createdBy} />
                       </p>
                     </div>
 
-                    <p className="flex items-center gap-1 text-sm text-stone-500">
+                    <p className="flex w-fit items-center gap-1 text-sm text-stone-500">
                       <Clock size={13} strokeWidth={2} />
                       {event.time}
                     </p>
@@ -546,9 +546,9 @@ export default function FamilyCalendar({
       </div>
 
       {editingEvent && (
-        <div className="fixed inset-0 z-[999999] bg-black/75">
-          <div className="flex min-h-screen items-start justify-center px-6 pt-36">
-            <div className="w-full max-w-xl rounded-3xl border border-stone-200 bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-[999999] overflow-y-auto bg-black/75">
+          <div className="flex min-h-screen items-start justify-center px-4 py-8 sm:px-6 sm:pt-36">
+            <div className="w-full max-w-xl rounded-3xl border border-stone-200 bg-white p-5 shadow-2xl sm:p-6">
               <div className="mb-6 flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-medium text-[#8D846F]">
@@ -660,7 +660,7 @@ export default function FamilyCalendar({
                     Slett avtale
                   </button>
 
-                  <div className="flex gap-3">
+                  <div className="flex flex-col gap-3 sm:flex-row">
                     <button
                       onClick={closeEditModal}
                       className="rounded-2xl bg-[#F7F4EA] px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"

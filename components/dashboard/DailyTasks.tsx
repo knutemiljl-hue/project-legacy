@@ -86,7 +86,7 @@ function TaskList({
             return (
               <div
                 key={task.id}
-                className={`flex w-full items-center justify-between gap-4 px-4 py-3 ${
+                className={`flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between ${
                   index !== visibleTasks.length - 1
                     ? "border-b border-[#ECE3D4]"
                     : ""
@@ -94,23 +94,23 @@ function TaskList({
               >
                 <button
                   onClick={() => onToggleTask(task.id)}
-                  className="flex flex-1 items-center gap-3 text-left"
+                  className="flex flex-1 items-start gap-3 text-left sm:items-center"
                 >
-                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white text-stone-300">
+                  <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white text-stone-300 sm:mt-0">
                     <Circle size={13} strokeWidth={2} />
                   </span>
 
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-medium text-[#24312A]">{task.title}</p>
-                    <p className="mt-1 text-sm text-stone-500">
+                    <p className="mt-1 text-sm leading-5 text-stone-500">
                       {task.subtitle}
                       <CreatedByText createdBy={task.createdBy} />
                     </p>
                   </div>
                 </button>
 
-                <div className="ml-4 flex items-center gap-4">
-                  <div className="text-right">
+                <div className="ml-9 flex items-center justify-between gap-3 sm:ml-4 sm:justify-end">
+                  <div className="text-left sm:text-right">
                     {formattedDate && (
                       <p className="text-xs text-stone-400">{formattedDate}</p>
                     )}
@@ -148,8 +148,8 @@ function CompletedTasks({
   const earnedXp = tasks.length * XP_PER_TASK;
 
   return (
-    <div className="rounded-3xl border border-[#DDE8D4] bg-[#F4F8EF] p-5">
-      <div className="mb-4 flex items-start justify-between gap-4">
+    <div className="rounded-3xl border border-[#DDE8D4] bg-[#F4F8EF] p-4 sm:p-5">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-[#6F8F54]">
             Fullført i dag
@@ -169,7 +169,7 @@ function CompletedTasks({
         </div>
 
         {tasks.length > 0 && (
-          <div className="rounded-full bg-[#8EB069] px-3 py-1 text-sm font-semibold text-white">
+          <div className="w-fit rounded-full bg-[#8EB069] px-3 py-1 text-sm font-semibold text-white">
             +{earnedXp} XP
           </div>
         )}
@@ -187,14 +187,14 @@ function CompletedTasks({
             return (
               <div
                 key={task.id}
-                className={`flex items-center justify-between gap-4 px-4 py-3 ${
+                className={`flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between ${
                   index !== tasks.length - 1
                     ? "border-b border-[#E6EEDA]"
                     : ""
                 }`}
               >
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="grid h-5 w-5 place-items-center rounded-full bg-[#8EB069] text-white">
                       <Check size={13} strokeWidth={2.5} />
                     </span>
@@ -206,7 +206,7 @@ function CompletedTasks({
                     </span>
                   </div>
 
-                  <p className="mt-1 text-sm text-stone-500">
+                  <p className="mt-1 text-sm leading-5 text-stone-500">
                     {getScopeLabel(task.scope)}
                     {formattedDate ? ` · ${formattedDate}` : ""}
                     {task.time ? ` · ${task.time}` : ""}
@@ -216,7 +216,7 @@ function CompletedTasks({
 
                 <button
                   onClick={() => onUndoTask(task.id)}
-                  className="flex items-center gap-1 rounded-full bg-[#F7F4EA] px-3 py-1 text-xs font-medium text-[#24312A] transition hover:brightness-95"
+                  className="flex w-fit items-center gap-1 rounded-full bg-[#F7F4EA] px-3 py-1 text-xs font-medium text-[#24312A] transition hover:brightness-95"
                 >
                   <RotateCcw size={12} strokeWidth={2} />
                   Angre
@@ -236,28 +236,28 @@ function TaskHistorySummary({ history }: { history: ArchivedTask[] }) {
   return (
     <Link
       href="/archive"
-      className="flex items-center justify-between gap-4 rounded-3xl border border-[#ECE3D4] bg-[#F7F4EA] px-5 py-4 transition hover:brightness-95"
+      className="flex items-center justify-between gap-3 rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA] px-4 py-3 transition hover:brightness-95 sm:rounded-3xl sm:px-5 sm:py-4"
     >
-      <div className="flex items-start gap-3">
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-white text-[#4F773D]">
-          <Archive size={18} strokeWidth={2} />
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-2xl bg-white text-[#4F773D] sm:h-9 sm:w-9">
+          <Archive size={16} strokeWidth={2} />
         </div>
 
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
             Arkiv
           </p>
 
-          <p className="mt-1 text-sm text-stone-600">
+          <p className="mt-0.5 truncate text-xs text-stone-500 sm:text-sm">
             {history.length === 0
-              ? "Ingen arkiverte oppgaver ennå"
+              ? "Ingen arkiverte oppgaver"
               : `${history.length} arkiverte oppgaver`}
           </p>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="rounded-2xl bg-white px-4 py-2 text-right">
+      <div className="flex shrink-0 items-center gap-2">
+        <div className="hidden rounded-2xl bg-white px-4 py-2 text-right sm:block">
           <p className="text-xs text-stone-500">XP</p>
           <p className="text-sm font-semibold text-[#24312A]">{totalXp}</p>
         </div>
@@ -446,8 +446,8 @@ export default function DailyTasks() {
   }
 
   return (
-    <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-6 shadow-sm ring-1 ring-black/5">
-      <div className="mb-6 flex items-start justify-between gap-4">
+    <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-4 shadow-sm ring-1 ring-black/5 sm:p-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
           <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-[#4F773D]">
             <CheckCircle2 size={21} strokeWidth={2} />
@@ -464,7 +464,7 @@ export default function DailyTasks() {
           </div>
         </div>
 
-        <div className="text-right">
+        <div className="ml-15 text-left sm:ml-0 sm:text-right">
           <p className="text-sm text-stone-500">
             {completedTaskItems.length} fullført i dag
           </p>
@@ -475,7 +475,7 @@ export default function DailyTasks() {
         </div>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-5 sm:space-y-6">
         <TaskList
           title="Egne oppgaver"
           tasks={personalTasks}

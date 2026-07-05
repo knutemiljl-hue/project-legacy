@@ -11,15 +11,24 @@ export default function Home() {
       <UserGreeting />
 
       <section className="grid grid-cols-1 gap-7 xl:grid-cols-[1.08fr_1fr]">
-        <div className="space-y-7">
+        <div className="order-1 xl:order-1">
           <ShoppingList compact />
+        </div>
+
+        <div className="order-2 xl:order-3">
           <DailyTasks />
+        </div>
+
+        <div className="order-3 xl:order-4">
+          <FamilyCalendar compact />
+        </div>
+
+        <div className="order-4 xl:order-5">
           <FinanceSummary />
         </div>
 
-        <div className="space-y-7">
+        <div className="order-5 xl:order-2">
           <CharacterSummary />
-          <FamilyCalendar compact />
         </div>
       </section>
     </main>
