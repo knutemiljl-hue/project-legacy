@@ -9,6 +9,8 @@ export type CalendarEventType =
   | "social"
   | "other";
 
+export type CalendarOwner = "knut" | "ingrid" | "family";
+
 export type CalendarEvent = {
   id: string;
   title: string;
@@ -16,6 +18,7 @@ export type CalendarEvent = {
   time: string;
   location?: string;
   type: CalendarEventType;
+  calendarOwner: CalendarOwner;
   createdAt: string;
   createdBy?: LegacyUserId;
 };
@@ -26,6 +29,7 @@ export type CalendarEventInput = {
   time?: string;
   location?: string;
   type: CalendarEventType;
+  calendarOwner?: CalendarOwner;
 };
 
 type CalendarEventRow = {
@@ -35,6 +39,7 @@ type CalendarEventRow = {
   event_time: string;
   location: string | null;
   type: CalendarEventType;
+  calendar_owner: CalendarOwner | null;
   created_by: LegacyUserId | null;
   created_at: string;
 };
@@ -47,6 +52,7 @@ function mapCalendarEvent(row: CalendarEventRow): CalendarEvent {
     time: row.event_time,
     location: row.location ?? undefined,
     type: row.type,
+    calendarOwner: row.calendar_owner ?? "family",
     createdAt: row.created_at,
     createdBy: row.created_by ?? undefined,
   };
@@ -99,6 +105,36 @@ export function getEventTypeLabel(type: CalendarEventType) {
   return labels[type];
 }
 
+export function getCalendarOwnerLabel(owner: CalendarOwner) {
+  const labels: Record<CalendarOwner, string> = {
+    knut: "Knut Emil",
+    ingrid: "Ingrid",
+    family: "Felles",
+  };
+
+  return labels[owner];
+}
+
+export function getCalendarOwnerDotClass(owner: CalendarOwner) {
+  const classes: Record<CalendarOwner, string> = {
+    knut: "bg-sky-500",
+    ingrid: "bg-rose-500",
+    family: "bg-emerald-500",
+  };
+
+  return classes[owner];
+}
+
+export function getCalendarOwnerBadgeClass(owner: CalendarOwner) {
+  const classes: Record<CalendarOwner, string> = {
+    knut: "border-sky-200 bg-sky-50 text-sky-700",
+    ingrid: "border-rose-200 bg-rose-50 text-rose-700",
+    family: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  };
+
+  return classes[owner];
+}
+
 export function sortCalendarEvents(events: CalendarEvent[]) {
   return [...events].sort((a, b) => {
     if (a.date !== b.date) {
@@ -113,7 +149,7 @@ export async function readCalendarEvents(): Promise<CalendarEvent[]> {
   const { data, error } = await supabase
     .from("legacy_calendar_events")
     .select(
-      "id, title, event_date, event_time, location, type, created_by, created_at"
+      "id, title, event_date, event_time, location, type, calendar_owner, created_by, created_at"
     )
     .order("event_date", { ascending: true })
     .order("event_time", { ascending: true });
@@ -143,6 +179,7 @@ export async function addCalendarEvent(event: CalendarEventInput) {
     event_time: event.time || "Hele dagen",
     location: event.location?.trim() || null,
     type: event.type,
+    calendar_owner: event.calendarOwner ?? "family",
     created_by: activeUser.id,
   });
 
@@ -172,6 +209,7 @@ export async function updateCalendarEvent(
       event_time: updatedEvent.time || "Hele dagen",
       location: updatedEvent.location?.trim() || null,
       type: updatedEvent.type,
+      calendar_owner: updatedEvent.calendarOwner ?? "family",
     })
     .eq("id", eventId);
 

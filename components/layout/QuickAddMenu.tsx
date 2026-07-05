@@ -11,7 +11,11 @@ import {
 } from "lucide-react";
 import {
   CalendarEventType,
+  CalendarOwner,
   addCalendarEvent,
+  getCalendarOwnerBadgeClass,
+  getCalendarOwnerDotClass,
+  getCalendarOwnerLabel,
   getLocalDateKey as getCalendarDateKey,
 } from "@/lib/calendar";
 import { addShoppingItems } from "@/lib/shopping";
@@ -56,6 +60,8 @@ const calendarTypes: {
   { id: "other", label: "Annet" },
 ];
 
+const calendarOwners: CalendarOwner[] = ["knut", "ingrid", "family"];
+
 export default function QuickAddMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -76,6 +82,8 @@ export default function QuickAddMenu() {
   const [calendarLocation, setCalendarLocation] = useState("");
   const [calendarType, setCalendarType] =
     useState<CalendarEventType>("family");
+  const [calendarOwner, setCalendarOwner] =
+    useState<CalendarOwner>("family");
 
   useEffect(() => {
     setIsMounted(true);
@@ -111,6 +119,7 @@ export default function QuickAddMenu() {
     setCalendarTime("");
     setCalendarLocation("");
     setCalendarType("family");
+    setCalendarOwner("family");
   }
 
   async function saveTask() {
@@ -150,6 +159,7 @@ export default function QuickAddMenu() {
       time: calendarTime,
       location: calendarLocation,
       type: calendarType,
+      calendarOwner,
     });
 
     closeModal();
@@ -478,6 +488,32 @@ export default function QuickAddMenu() {
                         placeholder="F.eks. Bergen sentrum"
                       />
                     </label>
+
+                    <div>
+                      <span className="text-sm font-medium text-[#24312A]">
+                        Gjelder
+                      </span>
+
+                      <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        {calendarOwners.map((owner) => (
+                          <button
+                            type="button"
+                            key={owner}
+                            onPointerUp={() => setCalendarOwner(owner)}
+                            className={`flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-medium transition ${
+                              calendarOwner === owner
+                                ? getCalendarOwnerBadgeClass(owner)
+                                : "border-stone-200 bg-[#F7F4EA] text-stone-500 hover:brightness-95"
+                            }`}
+                          >
+                            <span
+                              className={`h-2.5 w-2.5 rounded-full ${getCalendarOwnerDotClass(owner)}`}
+                            />
+                            {getCalendarOwnerLabel(owner)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
                     <div>
                       <span className="text-sm font-medium text-[#24312A]">

@@ -13,9 +13,13 @@ import {
 import {
   CalendarEvent,
   CalendarEventType,
+  CalendarOwner,
   deleteCalendarEvent,
   formatCalendarDate,
   formatCalendarMonth,
+  getCalendarOwnerBadgeClass,
+  getCalendarOwnerDotClass,
+  getCalendarOwnerLabel,
   getEventTypeLabel,
   getLocalDateKey,
   readCalendarEvents,
@@ -28,6 +32,8 @@ import { getUserDisplayName } from "@/lib/users";
 type FamilyCalendarProps = {
   compact?: boolean;
 };
+
+type CalendarViewMode = "month" | "week";
 
 const weekDays = ["Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn"];
 
@@ -43,6 +49,26 @@ const calendarTypes: {
   { id: "other", label: "Annet" },
 ];
 
+const calendarOwners: CalendarOwner[] = ["knut", "ingrid", "family"];
+
+const calendarOwnerBorderClasses: Record<CalendarOwner, string> = {
+  knut: "border-l-sky-500",
+  ingrid: "border-l-rose-500",
+  family: "border-l-emerald-500",
+};
+
+const calendarOwnerSoftBackgroundClasses: Record<CalendarOwner, string> = {
+  knut: "bg-sky-50",
+  ingrid: "bg-rose-50",
+  family: "bg-emerald-50",
+};
+
+const calendarOwnerTextClasses: Record<CalendarOwner, string> = {
+  knut: "text-sky-700",
+  ingrid: "text-rose-700",
+  family: "text-emerald-700",
+};
+
 function CreatedByText({ createdBy }: { createdBy?: string }) {
   if (!createdBy) {
     return null;
@@ -52,6 +78,33 @@ function CreatedByText({ createdBy }: { createdBy?: string }) {
     <span className="text-xs text-stone-400">
       · Lagt til av {getUserDisplayName(createdBy)}
     </span>
+  );
+}
+
+function CalendarOwnerBadge({ owner }: { owner: CalendarOwner }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-semibold ${getCalendarOwnerBadgeClass(
+        owner
+      )}`}
+    >
+      <span
+        className={`h-2.5 w-2.5 rounded-full ${getCalendarOwnerDotClass(
+          owner
+        )}`}
+      />
+      {getCalendarOwnerLabel(owner)}
+    </span>
+  );
+}
+
+function CalendarOwnerLegend() {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {calendarOwners.map((owner) => (
+        <CalendarOwnerBadge key={owner} owner={owner} />
+      ))}
+    </div>
   );
 }
 
@@ -65,6 +118,12 @@ function groupEventsByDate(events: CalendarEvent[]) {
 
     return groups;
   }, {});
+}
+
+function getOwnersForEvents(events: CalendarEvent[]) {
+  return calendarOwners.filter((owner) =>
+    events.some((event) => event.calendarOwner === owner)
+  );
 }
 
 function getDateKeyFromParts(year: number, monthIndex: number, day: number) {
@@ -129,6 +188,56 @@ function getCalendarDays(monthDate: Date) {
   return days;
 }
 
+function getMondayForDate(dateKey: string) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  const weekday = date.getDay() === 0 ? 7 : date.getDay();
+
+  date.setDate(date.getDate() - weekday + 1);
+
+  return date;
+}
+
+function getWeekDays(selectedDate: string) {
+  const monday = getMondayForDate(selectedDate);
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
+
+    return {
+      date: getLocalDateKey(date),
+      day: date.getDate(),
+      isCurrentMonth: true,
+    };
+  });
+}
+
+function getWeekLabel(selectedDate: string) {
+  const days = getWeekDays(selectedDate);
+  const firstDay = days[0].date;
+  const lastDay = days[6].date;
+
+  const [firstYear, firstMonth, firstDate] = firstDay.split("-").map(Number);
+  const [lastYear, lastMonth, lastDate] = lastDay.split("-").map(Number);
+
+  const first = new Date(firstYear, firstMonth - 1, firstDate);
+  const last = new Date(lastYear, lastMonth - 1, lastDate);
+
+  const firstLabel = new Intl.DateTimeFormat("nb-NO", {
+    day: "numeric",
+    month: "short",
+  }).format(first);
+
+  const lastLabel = new Intl.DateTimeFormat("nb-NO", {
+    day: "numeric",
+    month: "short",
+    year: first.getFullYear() === last.getFullYear() ? undefined : "numeric",
+  }).format(last);
+
+  return `${firstLabel} – ${lastLabel}`;
+}
+
 function getInitialEditState(event: CalendarEvent | null) {
   return {
     title: event?.title ?? "",
@@ -136,7 +245,94 @@ function getInitialEditState(event: CalendarEvent | null) {
     time: event?.time === "Hele dagen" ? "" : event?.time ?? "",
     location: event?.location ?? "",
     type: event?.type ?? "family",
+    calendarOwner: event?.calendarOwner ?? "family",
   };
+}
+
+function EventMiniCard({ event }: { event: CalendarEvent }) {
+  return (
+    <div
+      className={`truncate rounded-xl border-l-4 bg-white px-2 py-1.5 text-[10px] font-medium text-stone-700 shadow-sm ${
+        calendarOwnerBorderClasses[event.calendarOwner]
+      }`}
+      title={`${getCalendarOwnerLabel(event.calendarOwner)}: ${event.title}`}
+    >
+      <div className="flex items-center gap-1.5">
+        <span
+          className={`h-2 w-2 shrink-0 rounded-full ${getCalendarOwnerDotClass(
+            event.calendarOwner
+          )}`}
+        />
+        <span className="truncate">{event.title}</span>
+      </div>
+    </div>
+  );
+}
+
+function EventListButton({
+  event,
+  index,
+  total,
+  onClick,
+  variant = "white",
+}: {
+  event: CalendarEvent;
+  index: number;
+  total: number;
+  onClick: () => void;
+  variant?: "white" | "cream";
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full border-l-4 px-4 py-4 text-left transition sm:py-3 ${
+        variant === "white" ? "hover:bg-[#F7F4EA]" : "hover:bg-white"
+      } ${calendarOwnerBorderClasses[event.calendarOwner]} ${
+        calendarOwnerSoftBackgroundClasses[event.calendarOwner]
+      } ${
+        index !== total - 1 ? "border-b border-b-[#ECE3D4]" : ""
+      }`}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-semibold text-[#24312A]">{event.title}</p>
+
+            <CalendarOwnerBadge owner={event.calendarOwner} />
+
+            <span className="rounded-full bg-white/80 px-2 py-1 text-xs font-medium text-[#8D846F]">
+              {getEventTypeLabel(event.type)}
+            </span>
+          </div>
+
+          <p className="mt-1 flex flex-wrap items-center gap-1 text-sm leading-5 text-stone-500">
+            <Clock size={13} strokeWidth={2} />
+            {event.time}
+
+            {event.location && (
+              <>
+                <span>·</span>
+                <MapPin size={13} strokeWidth={2} />
+                {event.location}
+              </>
+            )}
+
+            <CreatedByText createdBy={event.createdBy} />
+          </p>
+        </div>
+
+        <p
+          className={`flex w-fit items-center gap-1 text-xs font-semibold ${
+            calendarOwnerTextClasses[event.calendarOwner]
+          }`}
+        >
+          <Edit3 size={12} strokeWidth={2} />
+          Rediger
+        </p>
+      </div>
+    </button>
+  );
 }
 
 export default function FamilyCalendar({
@@ -146,6 +342,7 @@ export default function FamilyCalendar({
   const [isLoading, setIsLoading] = useState(true);
   const [visibleMonth, setVisibleMonth] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState(getLocalDateKey());
+  const [viewMode, setViewMode] = useState<CalendarViewMode>("month");
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
 
   const [editTitle, setEditTitle] = useState("");
@@ -153,6 +350,8 @@ export default function FamilyCalendar({
   const [editTime, setEditTime] = useState("");
   const [editLocation, setEditLocation] = useState("");
   const [editType, setEditType] = useState<CalendarEventType>("family");
+  const [editCalendarOwner, setEditCalendarOwner] =
+    useState<CalendarOwner>("family");
 
   useEffect(() => {
     loadEvents();
@@ -192,6 +391,44 @@ export default function FamilyCalendar({
     );
   }
 
+  function goToPreviousWeek() {
+    const currentMonday = getMondayForDate(selectedDate);
+    currentMonday.setDate(currentMonday.getDate() - 7);
+
+    const nextSelectedDate = getLocalDateKey(currentMonday);
+
+    setSelectedDate(nextSelectedDate);
+    setVisibleMonth(currentMonday);
+  }
+
+  function goToNextWeek() {
+    const currentMonday = getMondayForDate(selectedDate);
+    currentMonday.setDate(currentMonday.getDate() + 7);
+
+    const nextSelectedDate = getLocalDateKey(currentMonday);
+
+    setSelectedDate(nextSelectedDate);
+    setVisibleMonth(currentMonday);
+  }
+
+  function goToPreviousPeriod() {
+    if (viewMode === "week" && !compact) {
+      goToPreviousWeek();
+      return;
+    }
+
+    goToPreviousMonth();
+  }
+
+  function goToNextPeriod() {
+    if (viewMode === "week" && !compact) {
+      goToNextWeek();
+      return;
+    }
+
+    goToNextMonth();
+  }
+
   function goToToday() {
     const today = new Date();
 
@@ -208,6 +445,7 @@ export default function FamilyCalendar({
     setEditTime(initialState.time);
     setEditLocation(initialState.location);
     setEditType(initialState.type);
+    setEditCalendarOwner(initialState.calendarOwner);
   }
 
   function closeEditModal() {
@@ -217,6 +455,7 @@ export default function FamilyCalendar({
     setEditTime("");
     setEditLocation("");
     setEditType("family");
+    setEditCalendarOwner("family");
   }
 
   async function saveEditedEvent() {
@@ -230,6 +469,7 @@ export default function FamilyCalendar({
       time: editTime,
       location: editLocation,
       type: editType,
+      calendarOwner: editCalendarOwner,
     });
 
     await loadEvents();
@@ -263,10 +503,19 @@ export default function FamilyCalendar({
     () => getCalendarDays(visibleMonth),
     [visibleMonth]
   );
+  const weekCalendarDays = useMemo(
+    () => getWeekDays(selectedDate),
+    [selectedDate]
+  );
 
   const selectedDateEvents = sortCalendarEvents(
     eventsByDate[selectedDate] ?? []
   );
+
+  const periodLabel =
+    viewMode === "week" && !compact
+      ? getWeekLabel(selectedDate)
+      : formatCalendarMonth(visibleMonth);
 
   return (
     <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-4 shadow-sm ring-1 ring-black/5 sm:p-6">
@@ -287,8 +536,8 @@ export default function FamilyCalendar({
 
             {!compact && (
               <p className="mt-2 text-sm leading-6 text-stone-600">
-                Klikk på en dag for å se avtalene. Klikk på en avtale for å
-                redigere.
+                Klikk på en dag for å se avtalene. Farger og venstrekant viser
+                om avtalen gjelder Knut Emil, Ingrid eller Felles.
               </p>
             )}
           </div>
@@ -302,6 +551,38 @@ export default function FamilyCalendar({
         </div>
       </div>
 
+      {!compact && (
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <CalendarOwnerLegend />
+
+          <div className="grid grid-cols-2 rounded-2xl bg-[#F7F4EA] p-1">
+            <button
+              type="button"
+              onClick={() => setViewMode("month")}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                viewMode === "month"
+                  ? "bg-white text-[#24312A] shadow-sm"
+                  : "text-stone-500 hover:text-[#24312A]"
+              }`}
+            >
+              Måned
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setViewMode("week")}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                viewMode === "week"
+                  ? "bg-white text-[#24312A] shadow-sm"
+                  : "text-stone-500 hover:text-[#24312A]"
+              }`}
+            >
+              Uke
+            </button>
+          </div>
+        </div>
+      )}
+
       {isLoading ? (
         <div className="rounded-2xl bg-[#F7F4EA] p-4">
           <p className="text-sm leading-6 text-stone-600">
@@ -314,17 +595,21 @@ export default function FamilyCalendar({
             <div className="mb-4 flex items-center justify-between gap-3">
               <button
                 type="button"
-                onClick={goToPreviousMonth}
+                onClick={goToPreviousPeriod}
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-[#24312A] shadow-sm transition hover:brightness-95"
-                aria-label="Forrige måned"
-                title="Forrige måned"
+                aria-label={viewMode === "week" ? "Forrige uke" : "Forrige måned"}
+                title={viewMode === "week" ? "Forrige uke" : "Forrige måned"}
               >
                 <ChevronLeft size={17} strokeWidth={2.25} />
               </button>
 
-              <button type="button" onClick={goToToday} className="min-w-0 text-center">
+              <button
+                type="button"
+                onClick={goToToday}
+                className="min-w-0 text-center"
+              >
                 <p className="truncate text-sm font-semibold capitalize text-[#24312A]">
-                  {formatCalendarMonth(visibleMonth)}
+                  {periodLabel}
                 </p>
 
                 <p className="mt-0.5 text-xs text-stone-500">Gå til i dag</p>
@@ -332,77 +617,182 @@ export default function FamilyCalendar({
 
               <button
                 type="button"
-                onClick={goToNextMonth}
+                onClick={goToNextPeriod}
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-[#24312A] shadow-sm transition hover:brightness-95"
-                aria-label="Neste måned"
-                title="Neste måned"
+                aria-label={viewMode === "week" ? "Neste uke" : "Neste måned"}
+                title={viewMode === "week" ? "Neste uke" : "Neste måned"}
               >
                 <ChevronRight size={17} strokeWidth={2.25} />
               </button>
             </div>
 
-            <div className="mb-2 grid grid-cols-7 gap-1">
-              {weekDays.map((day) => (
-                <div
-                  key={day}
-                  className="py-1 text-center text-[10px] font-semibold uppercase tracking-wide text-[#8D846F] sm:py-2 sm:text-[11px]"
-                >
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-7 gap-1">
-              {calendarDays.map((day) => {
-                const dayEvents = eventsByDate[day.date] ?? [];
-                const isToday = day.date === todayKey;
-                const isSelected = day.date === selectedDate;
-
-                return (
-                  <button
-                    type="button"
-                    key={day.date}
-                    onClick={() => setSelectedDate(day.date)}
-                    className={`min-h-11 rounded-2xl p-1.5 text-left transition hover:bg-white sm:min-h-12 sm:p-2 ${
-                      isSelected
-                        ? "bg-white shadow-sm ring-2 ring-[#8EB069]"
-                        : "bg-transparent"
-                    } ${!day.isCurrentMonth ? "opacity-35" : ""}`}
-                  >
-                    <div className="flex items-start justify-between gap-1">
-                      <span
-                        className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${
-                          isToday
-                            ? "bg-[#F3D66B] text-[#24312A]"
-                            : "text-[#24312A]"
-                        }`}
-                      >
-                        {day.day}
-                      </span>
-
-                      {dayEvents.length > 0 && (
-                        <span className="rounded-full bg-[#4F773D] px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                          {dayEvents.length}
-                        </span>
-                      )}
+            {viewMode === "month" || compact ? (
+              <>
+                <div className="mb-2 grid grid-cols-7 gap-1">
+                  {weekDays.map((day) => (
+                    <div
+                      key={day}
+                      className="py-1 text-center text-[10px] font-semibold uppercase tracking-wide text-[#8D846F] sm:py-2 sm:text-[11px]"
+                    >
+                      {day}
                     </div>
+                  ))}
+                </div>
 
-                    {!compact && dayEvents.length > 0 && (
-                      <div className="mt-1 hidden space-y-1 sm:block">
-                        {dayEvents.slice(0, 2).map((event) => (
-                          <div
-                            key={event.id}
-                            className="truncate rounded-full bg-white px-2 py-1 text-[10px] text-stone-600"
+                <div className="grid grid-cols-7 gap-1">
+                  {calendarDays.map((day) => {
+                    const dayEvents = eventsByDate[day.date] ?? [];
+                    const dayOwners = getOwnersForEvents(dayEvents);
+                    const isToday = day.date === todayKey;
+                    const isSelected = day.date === selectedDate;
+
+                    return (
+                      <button
+                        type="button"
+                        key={day.date}
+                        onClick={() => setSelectedDate(day.date)}
+                        className={`min-h-14 rounded-2xl border p-1.5 text-left transition hover:bg-white sm:min-h-20 sm:p-2 ${
+                          isSelected
+                            ? "border-[#8EB069] bg-white shadow-sm ring-2 ring-[#8EB069]"
+                            : dayOwners.length > 0
+                              ? "border-white bg-white/70"
+                              : "border-transparent bg-transparent"
+                        } ${!day.isCurrentMonth ? "opacity-35" : ""}`}
+                      >
+                        <div className="flex items-start justify-between gap-1">
+                          <span
+                            className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${
+                              isToday
+                                ? "bg-[#F3D66B] text-[#24312A]"
+                                : "text-[#24312A]"
+                            }`}
                           >
-                            {event.title}
+                            {day.day}
+                          </span>
+
+                          {dayEvents.length > 0 && (
+                            <span className="rounded-full bg-[#24312A] px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                              {dayEvents.length}
+                            </span>
+                          )}
+                        </div>
+
+                        {dayOwners.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {dayOwners.map((owner) => (
+                              <span
+                                key={owner}
+                                className={`h-2.5 w-2.5 rounded-full ring-2 ring-white ${getCalendarOwnerDotClass(
+                                  owner
+                                )}`}
+                                title={getCalendarOwnerLabel(owner)}
+                              />
+                            ))}
                           </div>
-                        ))}
+                        )}
+
+                        {!compact && dayEvents.length > 0 && (
+                          <div className="mt-2 hidden space-y-1 sm:block">
+                            {dayEvents.slice(0, 2).map((event) => (
+                              <EventMiniCard key={event.id} event={event} />
+                            ))}
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-7">
+                {weekCalendarDays.map((day, index) => {
+                  const dayEvents = sortCalendarEvents(
+                    eventsByDate[day.date] ?? []
+                  );
+                  const dayOwners = getOwnersForEvents(dayEvents);
+                  const isToday = day.date === todayKey;
+                  const isSelected = day.date === selectedDate;
+
+                  return (
+                    <button
+                      type="button"
+                      key={day.date}
+                      onClick={() => {
+                        setSelectedDate(day.date);
+                        setVisibleMonth(
+                          new Date(
+                            Number(day.date.slice(0, 4)),
+                            Number(day.date.slice(5, 7)) - 1,
+                            1
+                          )
+                        );
+                      }}
+                      className={`min-h-32 rounded-3xl border p-3 text-left transition hover:bg-white ${
+                        isSelected
+                          ? "border-[#8EB069] bg-white shadow-sm ring-2 ring-[#8EB069]"
+                          : dayOwners.length > 0
+                            ? "border-white bg-white/70"
+                            : "border-[#ECE3D4] bg-[#FBF8F0]"
+                      }`}
+                    >
+                      <div className="mb-3 flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
+                            {weekDays[index]}
+                          </p>
+
+                          <p
+                            className={`mt-1 grid h-8 w-8 place-items-center rounded-full text-sm font-bold ${
+                              isToday
+                                ? "bg-[#F3D66B] text-[#24312A]"
+                                : "bg-white text-[#24312A]"
+                            }`}
+                          >
+                            {day.day}
+                          </p>
+                        </div>
+
+                        {dayEvents.length > 0 && (
+                          <span className="rounded-full bg-[#24312A] px-2 py-1 text-xs font-semibold text-white">
+                            {dayEvents.length}
+                          </span>
+                        )}
                       </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+
+                      {dayOwners.length > 0 && (
+                        <div className="mb-3 flex flex-wrap gap-1.5">
+                          {dayOwners.map((owner) => (
+                            <span
+                              key={owner}
+                              className={`h-3 w-3 rounded-full ring-2 ring-white ${getCalendarOwnerDotClass(
+                                owner
+                              )}`}
+                              title={getCalendarOwnerLabel(owner)}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      {dayEvents.length === 0 ? (
+                        <p className="text-xs text-stone-400">Ingen avtaler</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {dayEvents.slice(0, 3).map((event) => (
+                            <EventMiniCard key={event.id} event={event} />
+                          ))}
+
+                          {dayEvents.length > 3 && (
+                            <p className="text-xs font-medium text-stone-500">
+                              + {dayEvents.length - 3} flere
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="rounded-3xl border border-[#ECE3D4] bg-[#F7F4EA] p-4">
@@ -431,50 +821,14 @@ export default function FamilyCalendar({
             ) : (
               <div className="overflow-hidden rounded-2xl bg-white">
                 {selectedDateEvents.map((event, index) => (
-                  <button
-                    type="button"
+                  <EventListButton
                     key={event.id}
+                    event={event}
+                    index={index}
+                    total={selectedDateEvents.length}
                     onClick={() => openEditModal(event)}
-                    className={`w-full px-4 py-4 text-left transition hover:bg-[#F7F4EA] sm:py-3 ${
-                      index !== selectedDateEvents.length - 1
-                        ? "border-b border-[#ECE3D4]"
-                        : ""
-                    }`}
-                  >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-medium text-[#24312A]">
-                            {event.title}
-                          </p>
-
-                          <span className="rounded-full bg-[#F7F4EA] px-2 py-1 text-xs font-medium text-[#8D846F]">
-                            {getEventTypeLabel(event.type)}
-                          </span>
-                        </div>
-
-                        <p className="mt-1 flex flex-wrap items-center gap-1 text-sm leading-5 text-stone-500">
-                          <Clock size={13} strokeWidth={2} />
-                          {event.time}
-
-                          {event.location && (
-                            <>
-                              <span>·</span>
-                              <MapPin size={13} strokeWidth={2} />
-                              {event.location}
-                            </>
-                          )}
-
-                          <CreatedByText createdBy={event.createdBy} />
-                        </p>
-                      </div>
-
-                      <p className="flex w-fit items-center gap-1 text-xs font-medium text-stone-400">
-                        <Edit3 size={12} strokeWidth={2} />
-                        Rediger
-                      </p>
-                    </div>
-                  </button>
+                    variant="white"
+                  />
                 ))}
               </div>
             )}
@@ -501,9 +855,11 @@ export default function FamilyCalendar({
             ) : (
               <div className="overflow-hidden rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA]">
                 {visibleUpcomingEvents.map((event, index) => (
-                  <button
-                    type="button"
+                  <EventListButton
                     key={event.id}
+                    event={event}
+                    index={index}
+                    total={visibleUpcomingEvents.length}
                     onClick={() => {
                       setSelectedDate(event.date);
                       setVisibleMonth(
@@ -514,36 +870,8 @@ export default function FamilyCalendar({
                         )
                       );
                     }}
-                    className={`w-full px-4 py-4 text-left transition hover:bg-white sm:py-3 ${
-                      index !== visibleUpcomingEvents.length - 1
-                        ? "border-b border-[#ECE3D4]"
-                        : ""
-                    }`}
-                  >
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-medium text-[#24312A]">
-                            {event.title}
-                          </p>
-
-                          <span className="rounded-full bg-white px-2 py-1 text-xs font-medium text-[#8D846F]">
-                            {getEventTypeLabel(event.type)}
-                          </span>
-                        </div>
-
-                        <p className="mt-1 text-sm leading-5 text-stone-500">
-                          {formatCalendarDate(event.date)}
-                          <CreatedByText createdBy={event.createdBy} />
-                        </p>
-                      </div>
-
-                      <p className="flex w-fit items-center gap-1 text-sm text-stone-500">
-                        <Clock size={13} strokeWidth={2} />
-                        {event.time}
-                      </p>
-                    </div>
-                  </button>
+                    variant="cream"
+                  />
                 ))}
               </div>
             )}
@@ -635,6 +963,34 @@ export default function FamilyCalendar({
                     placeholder="F.eks. Bergen sentrum"
                   />
                 </label>
+
+                <div>
+                  <span className="text-sm font-medium text-[#24312A]">
+                    Gjelder
+                  </span>
+
+                  <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    {calendarOwners.map((owner) => (
+                      <button
+                        type="button"
+                        key={owner}
+                        onClick={() => setEditCalendarOwner(owner)}
+                        className={`flex items-center justify-center gap-2 rounded-2xl border px-4 py-3 text-sm font-medium transition ${
+                          editCalendarOwner === owner
+                            ? getCalendarOwnerBadgeClass(owner)
+                            : "border-stone-200 bg-[#F7F4EA] text-stone-500 hover:brightness-95"
+                        }`}
+                      >
+                        <span
+                          className={`h-2.5 w-2.5 rounded-full ${getCalendarOwnerDotClass(
+                            owner
+                          )}`}
+                        />
+                        {getCalendarOwnerLabel(owner)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
                 <div>
                   <span className="text-sm font-medium text-[#24312A]">
