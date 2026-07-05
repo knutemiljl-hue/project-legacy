@@ -178,13 +178,13 @@ export default function QuickAddMenu() {
     isOpen && isMounted
       ? createPortal(
           <div
-            onClick={closeModal}
-            className="fixed inset-0 z-[999999] bg-black/75"
+            onPointerUp={closeModal}
+            className="fixed inset-0 z-[999999] overflow-y-auto bg-black/75"
           >
-            <div className="flex min-h-screen items-start justify-center px-6 pt-36">
+            <div className="flex min-h-screen items-start justify-center px-4 py-8 sm:px-6 sm:pt-36">
               <div
-                onClick={(event) => event.stopPropagation()}
-                className="w-full max-w-xl rounded-3xl border border-stone-200 bg-white p-6 shadow-2xl"
+                onPointerUp={(event) => event.stopPropagation()}
+                className="w-full max-w-xl rounded-3xl border border-stone-200 bg-white p-5 shadow-2xl sm:p-6"
               >
                 <div className="mb-6 flex items-start justify-between gap-4">
                   <div>
@@ -204,7 +204,8 @@ export default function QuickAddMenu() {
                   </div>
 
                   <button
-                    onClick={closeModal}
+                    type="button"
+                    onPointerUp={closeModal}
                     className="rounded-full bg-[#F7F4EA] px-3 py-1 text-sm font-medium text-[#24312A] transition hover:brightness-95"
                   >
                     Lukk
@@ -218,8 +219,9 @@ export default function QuickAddMenu() {
 
                       return (
                         <button
+                          type="button"
                           key={action.id}
-                          onClick={() => setActiveAction(action.id)}
+                          onPointerUp={() => setActiveAction(action.id)}
                           className="rounded-2xl bg-[#F7F4EA] p-4 text-left transition hover:brightness-95"
                         >
                           <div className="mb-3 grid h-10 w-10 place-items-center rounded-2xl bg-white text-[#4F773D]">
@@ -248,7 +250,8 @@ export default function QuickAddMenu() {
 
                       <div className="mt-2 grid grid-cols-2 gap-3">
                         <button
-                          onClick={() => setTaskScope("personal")}
+                          type="button"
+                          onPointerUp={() => setTaskScope("personal")}
                           className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
                             taskScope === "personal"
                               ? "border-[#8EB069] bg-[#EEF5E8] text-[#24312A]"
@@ -259,7 +262,8 @@ export default function QuickAddMenu() {
                         </button>
 
                         <button
-                          onClick={() => setTaskScope("family")}
+                          type="button"
+                          onPointerUp={() => setTaskScope("family")}
                           className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
                             taskScope === "family"
                               ? "border-[#8EB069] bg-[#EEF5E8] text-[#24312A]"
@@ -329,14 +333,16 @@ export default function QuickAddMenu() {
 
                     <div className="flex justify-between gap-3 pt-2">
                       <button
-                        onClick={() => setActiveAction(null)}
+                        type="button"
+                        onPointerUp={() => setActiveAction(null)}
                         className="rounded-2xl bg-[#F7F4EA] px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
                       >
                         Tilbake
                       </button>
 
                       <button
-                        onClick={saveTask}
+                        type="button"
+                        onPointerUp={saveTask}
                         className="rounded-2xl bg-[#3F6F35] px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:brightness-110"
                       >
                         Lagre gjøremål
@@ -368,14 +374,16 @@ export default function QuickAddMenu() {
 
                     <div className="flex justify-between gap-3 pt-2">
                       <button
-                        onClick={() => setActiveAction(null)}
+                        type="button"
+                        onPointerUp={() => setActiveAction(null)}
                         className="rounded-2xl bg-[#F7F4EA] px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
                       >
                         Tilbake
                       </button>
 
                       <button
-                        onClick={saveShoppingItems}
+                        type="button"
+                        onPointerUp={saveShoppingItems}
                         className="rounded-2xl bg-[#3F6F35] px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:brightness-110"
                       >
                         Legg til varer
@@ -456,8 +464,9 @@ export default function QuickAddMenu() {
                       <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
                         {calendarTypes.map((type) => (
                           <button
+                            type="button"
                             key={type.id}
-                            onClick={() => setCalendarType(type.id)}
+                            onPointerUp={() => setCalendarType(type.id)}
                             className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
                               calendarType === type.id
                                 ? "border-[#8EB069] bg-[#EEF5E8] text-[#24312A]"
@@ -472,14 +481,16 @@ export default function QuickAddMenu() {
 
                     <div className="flex justify-between gap-3 pt-2">
                       <button
-                        onClick={() => setActiveAction(null)}
+                        type="button"
+                        onPointerUp={() => setActiveAction(null)}
                         className="rounded-2xl bg-[#F7F4EA] px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
                       >
                         Tilbake
                       </button>
 
                       <button
-                        onClick={saveCalendarEvent}
+                        type="button"
+                        onPointerUp={saveCalendarEvent}
                         className="rounded-2xl bg-[#3F6F35] px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:brightness-110"
                       >
                         Lagre avtale
@@ -502,7 +513,8 @@ export default function QuickAddMenu() {
                       </p>
 
                       <button
-                        onClick={() => setActiveAction(null)}
+                        type="button"
+                        onPointerUp={() => setActiveAction(null)}
                         className="mt-5 rounded-2xl bg-white px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
                       >
                         Tilbake
@@ -519,8 +531,9 @@ export default function QuickAddMenu() {
   return (
     <>
       <button
-        onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 rounded-2xl bg-[#3F6F35] px-4 py-2 font-medium text-white shadow-sm transition hover:brightness-110"
+        type="button"
+        onPointerUp={() => setIsOpen(true)}
+        className="flex touch-manipulation items-center gap-2 rounded-2xl bg-[#3F6F35] px-4 py-2 font-medium text-white shadow-sm transition hover:brightness-110"
       >
         <Plus size={17} strokeWidth={2.25} />
         Ny
