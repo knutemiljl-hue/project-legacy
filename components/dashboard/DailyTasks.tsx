@@ -31,6 +31,10 @@ function formatDate(date?: string) {
   }).format(new Date(date));
 }
 
+function getScopeLabel(scope: TaskScope) {
+  return scope === "family" ? "Familie" : "Egen";
+}
+
 function TaskList({
   title,
   tasks,
@@ -115,6 +119,81 @@ function TaskList({
   );
 }
 
+function CompletedTasks({
+  tasks,
+  onUndoTask,
+}: {
+  tasks: Task[];
+  onUndoTask: (taskId: string) => void;
+}) {
+  return (
+    <div className="rounded-3xl border border-[#DDE8D4] bg-[#F4F8EF] p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-wide text-[#6F8F54]">
+            Fullført i dag
+          </p>
+
+          <h3 className="mt-1 text-xl font-semibold text-[#24312A]">
+            {tasks.length === 0
+              ? "Ingen fullførte oppgaver ennå"
+              : `${tasks.length} oppgaver gjort`}
+          </h3>
+        </div>
+
+        {tasks.length > 0 && (
+          <div className="grid h-10 w-10 place-items-center rounded-full bg-[#8EB069] text-lg font-semibold text-white">
+            ✓
+          </div>
+        )}
+      </div>
+
+      {tasks.length === 0 ? (
+        <p className="text-sm leading-6 text-stone-600">
+          Når dere huker av oppgaver, samles de her slik at familien ser hva som
+          er gjort.
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {tasks.map((task) => {
+            const formattedDate = formatDate(task.date);
+
+            return (
+              <div
+                key={task.id}
+                className="flex items-center justify-between rounded-2xl bg-white/70 px-4 py-3"
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="grid h-5 w-5 place-items-center rounded-full bg-[#8EB069] text-xs text-white">
+                      ✓
+                    </span>
+
+                    <p className="font-medium text-[#24312A]">{task.title}</p>
+                  </div>
+
+                  <p className="mt-1 text-sm text-stone-500">
+                    {getScopeLabel(task.scope)}
+                    {formattedDate ? ` · ${formattedDate}` : ""}
+                    {task.time ? ` · ${task.time}` : ""}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => onUndoTask(task.id)}
+                  className="rounded-full bg-[#F7F4EA] px-3 py-1 text-xs font-medium text-[#24312A] transition hover:brightness-95"
+                >
+                  Angre
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DailyTasks() {
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
   const [customTasks, setCustomTasks] = useState<Task[]>([]);
@@ -136,6 +215,10 @@ export default function DailyTasks() {
 
   const openTasks = allTasks.filter(
     (task) => !completedTasks.includes(task.id)
+  );
+
+  const completedTaskItems = allTasks.filter((task) =>
+    completedTasks.includes(task.id)
   );
 
   useEffect(() => {
@@ -237,7 +320,7 @@ export default function DailyTasks() {
         </div>
 
         <p className="text-sm text-stone-500">
-          {completedTasks.length} fullført i dag
+          {completedTaskItems.length} fullført i dag
         </p>
       </div>
 
@@ -256,6 +339,11 @@ export default function DailyTasks() {
           completedTasks={completedTasks}
           onToggleTask={toggleTask}
           onDeleteTask={deleteTask}
+        />
+
+        <CompletedTasks
+          tasks={completedTaskItems}
+          onUndoTask={toggleTask}
         />
       </div>
     </section>
