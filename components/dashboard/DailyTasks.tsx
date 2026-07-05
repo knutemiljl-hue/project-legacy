@@ -31,7 +31,11 @@ import {
   saveCustomTasks,
   saveTaskHistory,
 } from "@/lib/tasks";
-import { getUserDisplayName } from "@/lib/users";
+import {
+  LegacyUserId,
+  getUserDisplayName,
+  readActiveUser,
+} from "@/lib/users";
 
 function CreatedByText({ createdBy }: { createdBy?: string }) {
   if (!createdBy) {
@@ -43,6 +47,18 @@ function CreatedByText({ createdBy }: { createdBy?: string }) {
       · Lagt til av {getUserDisplayName(createdBy)}
     </span>
   );
+}
+
+function isVisibleForActiveUser(task: Task, activeUserId: LegacyUserId) {
+  if (task.scope === "family") {
+    return true;
+  }
+
+  if (!task.createdBy) {
+    return true;
+  }
+
+  return task.createdBy === activeUserId;
 }
 
 function TaskList({
@@ -274,15 +290,26 @@ export default function DailyTasks() {
   >([]);
   const [customTasks, setCustomTasks] = useState<Task[]>([]);
   const [taskHistory, setTaskHistory] = useState<ArchivedTask[]>([]);
+  const [activeUserId, setActiveUserId] = useState<LegacyUserId>("knut");
 
   const defaultTasks = createDefaultTasks(dailyTasks);
   const allTasks: Task[] = [...defaultTasks, ...customTasks];
-  const todayTasks = allTasks.filter((task) => isTaskForToday(task));
+
+  const visibleTasksForUser = allTasks.filter((task) =>
+    isVisibleForActiveUser(task, activeUserId)
+  );
+
+  const todayTasks = visibleTasksForUser.filter((task) => isTaskForToday(task));
 
   const completedTaskIds = completionRecords.map((record) => record.taskId);
 
-  const personalTasks = allTasks.filter((task) => task.scope === "personal");
-  const familyTasks = allTasks.filter((task) => task.scope === "family");
+  const personalTasks = visibleTasksForUser.filter(
+    (task) => task.scope === "personal"
+  );
+
+  const familyTasks = visibleTasksForUser.filter(
+    (task) => task.scope === "family"
+  );
 
   const openTasks = todayTasks.filter(
     (task) => !completedTaskIds.includes(task.id)
@@ -296,16 +323,31 @@ export default function DailyTasks() {
 
   useEffect(() => {
     initializeTasks();
+    updateActiveUser();
 
     window.addEventListener("project-legacy-tasks-updated", loadCustomTasks);
+    window.addEventListener(
+      "project-legacy-active-user-updated",
+      updateActiveUser
+    );
+    window.addEventListener("storage", updateActiveUser);
 
     return () => {
       window.removeEventListener(
         "project-legacy-tasks-updated",
         loadCustomTasks
       );
+      window.removeEventListener(
+        "project-legacy-active-user-updated",
+        updateActiveUser
+      );
+      window.removeEventListener("storage", updateActiveUser);
     };
   }, []);
+
+  function updateActiveUser() {
+    setActiveUserId(readActiveUser().id);
+  }
 
   function initializeTasks() {
     const loadedCustomTasks = readCustomTasks();
