@@ -2,6 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Edit3,
+  MapPin,
+  Trash2,
+} from "lucide-react";
+import {
   CalendarEvent,
   CalendarEventType,
   deleteCalendarEvent,
@@ -270,8 +279,8 @@ export default function FamilyCalendar({
     <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-6 shadow-sm ring-1 ring-black/5">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-lg text-[#4F773D]">
-            ◌
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-[#4F773D]">
+            <CalendarDays size={21} strokeWidth={2} />
           </div>
 
           <div>
@@ -305,11 +314,11 @@ export default function FamilyCalendar({
           <div className="mb-4 flex items-center justify-between gap-3">
             <button
               onClick={goToPreviousMonth}
-              className="grid h-9 w-9 place-items-center rounded-full bg-white text-sm font-medium text-[#24312A] shadow-sm transition hover:brightness-95"
+              className="grid h-9 w-9 place-items-center rounded-full bg-white text-[#24312A] shadow-sm transition hover:brightness-95"
               aria-label="Forrige måned"
               title="Forrige måned"
             >
-              ←
+              <ChevronLeft size={17} strokeWidth={2.25} />
             </button>
 
             <button onClick={goToToday} className="text-center">
@@ -322,11 +331,11 @@ export default function FamilyCalendar({
 
             <button
               onClick={goToNextMonth}
-              className="grid h-9 w-9 place-items-center rounded-full bg-white text-sm font-medium text-[#24312A] shadow-sm transition hover:brightness-95"
+              className="grid h-9 w-9 place-items-center rounded-full bg-white text-[#24312A] shadow-sm transition hover:brightness-95"
               aria-label="Neste måned"
               title="Neste måned"
             >
-              →
+              <ChevronRight size={17} strokeWidth={2.25} />
             </button>
           </div>
 
@@ -440,14 +449,24 @@ export default function FamilyCalendar({
                         </span>
                       </div>
 
-                      <p className="mt-1 text-sm text-stone-500">
+                      <p className="mt-1 flex flex-wrap items-center gap-1 text-sm text-stone-500">
+                        <Clock size={13} strokeWidth={2} />
                         {event.time}
-                        {event.location ? ` · ${event.location}` : ""}
+
+                        {event.location && (
+                          <>
+                            <span>·</span>
+                            <MapPin size={13} strokeWidth={2} />
+                            {event.location}
+                          </>
+                        )}
+
                         <CreatedByText createdBy={event.createdBy} />
                       </p>
                     </div>
 
-                    <p className="text-xs font-medium text-stone-400">
+                    <p className="flex items-center gap-1 text-xs font-medium text-stone-400">
+                      <Edit3 size={12} strokeWidth={2} />
                       Rediger
                     </p>
                   </div>
@@ -514,7 +533,10 @@ export default function FamilyCalendar({
                       </p>
                     </div>
 
-                    <p className="text-sm text-stone-500">{event.time}</p>
+                    <p className="flex items-center gap-1 text-sm text-stone-500">
+                      <Clock size={13} strokeWidth={2} />
+                      {event.time}
+                    </p>
                   </div>
                 </button>
               ))}
@@ -632,8 +654,9 @@ export default function FamilyCalendar({
                 <div className="flex flex-col justify-between gap-3 pt-2 sm:flex-row">
                   <button
                     onClick={() => removeEvent(editingEvent.id)}
-                    className="rounded-2xl bg-red-50 px-5 py-3 text-sm font-medium text-red-700 transition hover:brightness-95"
+                    className="flex items-center justify-center gap-2 rounded-2xl bg-red-50 px-5 py-3 text-sm font-medium text-red-700 transition hover:brightness-95"
                   >
+                    <Trash2 size={15} strokeWidth={2} />
                     Slett avtale
                   </button>
 

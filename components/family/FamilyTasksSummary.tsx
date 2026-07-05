@@ -2,120 +2,41 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import {
+  Check,
+  CheckCircle2,
+  Circle,
+  RotateCcw,
+} from "lucide-react";
+import {
+  ArchivedTask,
+  CompletionRecord,
+  Task,
+  XP_PER_TASK,
+  formatTaskDate,
+  isTaskForToday,
+  notifyTaskAndXpUpdates,
+  readCompletionRecords,
+  readCustomTasks,
+  readTaskHistory,
+  saveCompletionRecords,
+} from "@/lib/tasks";
+import { getUserDisplayName } from "@/lib/users";
 
-const CUSTOM_TASKS_KEY = "project-legacy-custom-daily-tasks";
-const COMPLETION_RECORDS_KEY = "project-legacy-task-completions";
-const COMPLETED_TASKS_KEY = "project-legacy-daily-tasks";
-const TASK_HISTORY_KEY = "project-legacy-task-history";
-
-const XP_PER_TASK = 5;
-
-type TaskScope = "personal" | "family";
-
-type Task = {
-  id: string;
-  title: string;
-  subtitle: string;
-  date?: string;
-  time: string;
-  scope?: TaskScope;
-  done?: boolean;
-  isCustom?: boolean;
-};
-
-type CompletionRecord = {
-  taskId: string;
-  completedAt: string;
-  xp: number;
-};
-
-type ArchivedTask = {
-  id: string;
-  taskId: string;
-  title: string;
-  subtitle: string;
-  date?: string;
-  time: string;
-  scope: TaskScope;
-  completedAt: string;
-  xp: number;
-};
-
-function notifyUpdates() {
-  window.setTimeout(() => {
-    window.dispatchEvent(new Event("project-legacy-xp-updated"));
-    window.dispatchEvent(new Event("project-legacy-tasks-updated"));
-  }, 0);
+function readFamilyTasks() {
+  return readCustomTasks().filter((task) => task.scope === "family");
 }
 
-function getLocalDateKey(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-function getTodayKey() {
-  return getLocalDateKey();
-}
-
-function isTaskForToday(task: Task) {
-  if (!task.date) {
-    return true;
-  }
-
-  return task.date === getTodayKey();
-}
-
-function formatDate(date?: string) {
-  if (!date) {
+function CreatedByText({ createdBy }: { createdBy?: string }) {
+  if (!createdBy) {
     return null;
   }
 
-  const [year, month, day] = date.split("-").map(Number);
-  const localDate = new Date(year, month - 1, day);
-
-  return new Intl.DateTimeFormat("nb-NO", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  }).format(localDate);
-}
-
-function readFamilyTasks() {
-  const storedTasks = window.localStorage.getItem(CUSTOM_TASKS_KEY);
-  const parsedTasks: Task[] = storedTasks ? JSON.parse(storedTasks) : [];
-
-  return parsedTasks
-    .map((task) => ({
-      ...task,
-      scope: task.scope || "personal",
-    }))
-    .filter((task) => task.scope === "family");
-}
-
-function readCompletionRecords() {
-  const storedRecords = window.localStorage.getItem(COMPLETION_RECORDS_KEY);
-
-  return storedRecords ? JSON.parse(storedRecords) : [];
-}
-
-function readHistory() {
-  const storedHistory = window.localStorage.getItem(TASK_HISTORY_KEY);
-
-  return storedHistory ? JSON.parse(storedHistory) : [];
-}
-
-function saveCompletionRecords(records: CompletionRecord[]) {
-  window.localStorage.setItem(COMPLETION_RECORDS_KEY, JSON.stringify(records));
-
-  window.localStorage.setItem(
-    COMPLETED_TASKS_KEY,
-    JSON.stringify(records.map((record) => record.taskId))
+  return (
+    <span className="text-xs text-stone-400">
+      · Lagt til av {getUserDisplayName(createdBy)}
+    </span>
   );
-
-  notifyUpdates();
 }
 
 export default function FamilyTasksSummary() {
@@ -144,7 +65,7 @@ export default function FamilyTasksSummary() {
   function loadData() {
     setFamilyTasks(readFamilyTasks());
     setCompletionRecords(readCompletionRecords());
-    setHistory(readHistory());
+    setHistory(readTaskHistory());
   }
 
   function toggleTask(taskId: string) {
@@ -165,6 +86,7 @@ export default function FamilyTasksSummary() {
           ];
 
       saveCompletionRecords(nextRecords);
+      notifyTaskAndXpUpdates();
 
       return nextRecords;
     });
@@ -193,46 +115,48 @@ export default function FamilyTasksSummary() {
   const totalFamilyXp = familyXpToday + familyXpArchived;
 
   return (
-    <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-[#8D846F]">
-            Familieoppgaver
-          </p>
+    <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-6 shadow-sm ring-1 ring-black/5">
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-[#4F773D]">
+            <CheckCircle2 size={21} strokeWidth={2} />
+          </div>
 
-          <h2 className="mt-1 text-2xl font-semibold text-[#24312A]">
-            Felles oppgaver
-          </h2>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
+              Familieoppgaver
+            </p>
 
-          <p className="mt-2 text-sm leading-6 text-stone-600">
-            Oppgaver som gjelder hjemmet, barnet eller familien samlet.
-          </p>
+            <h2 className="mt-1 text-2xl font-semibold text-[#24312A]">
+              Felles oppgaver
+            </h2>
+          </div>
         </div>
 
-        <div className="rounded-2xl bg-[#F4F8EF] px-4 py-3 text-right">
-          <p className="text-xs text-[#6F8F54]">Familie-XP</p>
+        <div className="rounded-2xl bg-[#F7F4EA] px-4 py-3 text-right">
+          <p className="text-xs text-stone-500">Familie-XP</p>
           <p className="text-lg font-semibold text-[#24312A]">
             {totalFamilyXp}
           </p>
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-3 gap-3">
-        <div className="rounded-2xl bg-[#F7F4EA] p-4">
+      <div className="mb-5 grid grid-cols-3 gap-3">
+        <div className="rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA] p-4">
           <p className="text-xs text-stone-500">Åpne i dag</p>
           <p className="mt-1 text-xl font-semibold text-[#24312A]">
             {openFamilyTasks.length}
           </p>
         </div>
 
-        <div className="rounded-2xl bg-[#F7F4EA] p-4">
-          <p className="text-xs text-stone-500">Fullført i dag</p>
+        <div className="rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA] p-4">
+          <p className="text-xs text-stone-500">Fullført</p>
           <p className="mt-1 text-xl font-semibold text-[#24312A]">
             {completedFamilyTasksToday.length}
           </p>
         </div>
 
-        <div className="rounded-2xl bg-[#F7F4EA] p-4">
+        <div className="rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA] p-4">
           <p className="text-xs text-stone-500">Arkivert</p>
           <p className="mt-1 text-xl font-semibold text-[#24312A]">
             {archivedFamilyTasks.length}
@@ -242,7 +166,7 @@ export default function FamilyTasksSummary() {
 
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-[#8D846F]">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
             Åpne i dag
           </h3>
 
@@ -255,31 +179,39 @@ export default function FamilyTasksSummary() {
         </div>
 
         {openFamilyTasks.length === 0 ? (
-          <div className="rounded-2xl bg-[#F7F4EA] p-4">
+          <div className="rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA] p-4">
             <p className="text-sm leading-6 text-stone-600">
               Ingen åpne familieoppgaver i dag.
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {openFamilyTasks.map((task) => {
-              const formattedDate = formatDate(task.date);
+          <div className="overflow-hidden rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA]">
+            {openFamilyTasks.map((task, index) => {
+              const formattedDate = formatTaskDate(task.date);
 
               return (
                 <div
                   key={task.id}
-                  className="flex items-center justify-between rounded-2xl bg-[#F7F4EA] p-4"
+                  className={`flex items-center justify-between gap-4 px-4 py-3 ${
+                    index !== openFamilyTasks.length - 1
+                      ? "border-b border-[#ECE3D4]"
+                      : ""
+                  }`}
                 >
                   <button
                     onClick={() => toggleTask(task.id)}
                     className="flex flex-1 items-center gap-3 text-left"
                   >
-                    <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300" />
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white text-stone-300">
+                      <Circle size={13} strokeWidth={2} />
+                    </span>
 
                     <div>
                       <p className="font-medium text-[#24312A]">{task.title}</p>
+
                       <p className="mt-1 text-sm text-stone-500">
                         {task.subtitle}
+                        <CreatedByText createdBy={task.createdBy} />
                       </p>
                     </div>
                   </button>
@@ -299,10 +231,10 @@ export default function FamilyTasksSummary() {
       </div>
 
       {completedFamilyTasksToday.length > 0 && (
-        <div className="mt-6 rounded-3xl border border-[#DDE8D4] bg-[#F4F8EF] p-5">
+        <div className="mt-5 rounded-3xl border border-[#DDE8D4] bg-[#F4F8EF] p-5">
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-[#6F8F54]">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#6F8F54]">
                 Fullført i dag
               </p>
 
@@ -316,24 +248,36 @@ export default function FamilyTasksSummary() {
             </p>
           </div>
 
-          <div className="space-y-2">
-            {completedFamilyTasksToday.map((task) => (
+          <div className="overflow-hidden rounded-2xl bg-white/70">
+            {completedFamilyTasksToday.map((task, index) => (
               <div
                 key={task.id}
-                className="flex items-center justify-between rounded-2xl bg-white/70 px-4 py-3"
+                className={`flex items-center justify-between gap-4 px-4 py-3 ${
+                  index !== completedFamilyTasksToday.length - 1
+                    ? "border-b border-[#E6EEDA]"
+                    : ""
+                }`}
               >
-                <div className="flex items-center gap-2">
-                  <span className="grid h-5 w-5 place-items-center rounded-full bg-[#8EB069] text-xs text-white">
-                    ✓
-                  </span>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="grid h-5 w-5 place-items-center rounded-full bg-[#8EB069] text-white">
+                      <Check size={13} strokeWidth={2.5} />
+                    </span>
 
-                  <p className="font-medium text-[#24312A]">{task.title}</p>
+                    <p className="font-medium text-[#24312A]">{task.title}</p>
+                  </div>
+
+                  <p className="mt-1 text-sm text-stone-500">
+                    {task.time}
+                    <CreatedByText createdBy={task.createdBy} />
+                  </p>
                 </div>
 
                 <button
                   onClick={() => toggleTask(task.id)}
-                  className="rounded-full bg-[#F7F4EA] px-3 py-1 text-xs font-medium text-[#24312A] transition hover:brightness-95"
+                  className="flex items-center gap-1 rounded-full bg-[#F7F4EA] px-3 py-1 text-xs font-medium text-[#24312A] transition hover:brightness-95"
                 >
+                  <RotateCcw size={12} strokeWidth={2} />
                   Angre
                 </button>
               </div>
