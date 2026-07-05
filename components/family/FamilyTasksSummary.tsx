@@ -2,30 +2,24 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import {
-  Check,
-  CheckCircle2,
-  Circle,
-  RotateCcw,
-} from "lucide-react";
+import { Check, CheckCircle2, Circle, RotateCcw } from "lucide-react";
 import {
   ArchivedTask,
-  CompletionRecord,
   Task,
-  XP_PER_TASK,
   formatTaskDate,
+  getDateKey,
+  getTodayKey,
   isTaskForToday,
-  notifyTaskAndXpUpdates,
-  readCompletionRecords,
-  readCustomTasks,
-  readTaskHistory,
-  saveCompletionRecords,
+  readArchivedTasks,
+  readTasks,
+  subscribeToTasks,
+  toggleTaskCompleted,
 } from "@/lib/tasks";
-import { getUserDisplayName } from "@/lib/users";
-
-function readFamilyTasks() {
-  return readCustomTasks().filter((task) => task.scope === "family");
-}
+import {
+  LegacyUserId,
+  getUserDisplayName,
+  readActiveUser,
+} from "@/lib/users";
 
 function CreatedByText({ createdBy }: { createdBy?: string }) {
   if (!createdBy) {
@@ -39,80 +33,116 @@ function CreatedByText({ createdBy }: { createdBy?: string }) {
   );
 }
 
+function CompletedByText({ completedBy }: { completedBy?: string }) {
+  if (!completedBy) {
+    return null;
+  }
+
+  return (
+    <span className="text-xs text-stone-400">
+      · Fullført av {getUserDisplayName(completedBy)}
+    </span>
+  );
+}
+
 export default function FamilyTasksSummary() {
   const [familyTasks, setFamilyTasks] = useState<Task[]>([]);
-  const [completionRecords, setCompletionRecords] = useState<
-    CompletionRecord[]
-  >([]);
   const [history, setHistory] = useState<ArchivedTask[]>([]);
+  const [activeUserId, setActiveUserId] = useState<LegacyUserId>("knut");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadData();
+    updateActiveUser();
 
+    const unsubscribeFromTasks = subscribeToTasks(loadData);
+
+    window.addEventListener(
+      "project-legacy-active-user-updated",
+      updateActiveUser
+    );
     window.addEventListener("project-legacy-tasks-updated", loadData);
     window.addEventListener("project-legacy-xp-updated", loadData);
     window.addEventListener("focus", loadData);
-    window.addEventListener("storage", loadData);
 
     return () => {
+      unsubscribeFromTasks();
+      window.removeEventListener(
+        "project-legacy-active-user-updated",
+        updateActiveUser
+      );
       window.removeEventListener("project-legacy-tasks-updated", loadData);
       window.removeEventListener("project-legacy-xp-updated", loadData);
       window.removeEventListener("focus", loadData);
-      window.removeEventListener("storage", loadData);
     };
   }, []);
 
-  function loadData() {
-    setFamilyTasks(readFamilyTasks());
-    setCompletionRecords(readCompletionRecords());
-    setHistory(readTaskHistory());
+  function updateActiveUser() {
+    setActiveUserId(readActiveUser().id);
   }
 
-  function toggleTask(taskId: string) {
-    setCompletionRecords((currentRecords) => {
-      const isCompleted = currentRecords.some(
-        (record) => record.taskId === taskId
-      );
+  async function loadData() {
+    setIsLoading(true);
 
-      const nextRecords = isCompleted
-        ? currentRecords.filter((record) => record.taskId !== taskId)
-        : [
-            ...currentRecords,
-            {
-              taskId,
-              completedAt: new Date().toISOString(),
-              xp: XP_PER_TASK,
-            },
-          ];
+    const [nextTasks, nextHistory] = await Promise.all([
+      readTasks(),
+      readArchivedTasks(),
+    ]);
 
-      saveCompletionRecords(nextRecords);
-      notifyTaskAndXpUpdates();
-
-      return nextRecords;
-    });
+    setFamilyTasks(nextTasks.filter((task) => task.scope === "family"));
+    setHistory(nextHistory.filter((task) => task.scope === "family"));
+    setIsLoading(false);
   }
 
-  const completedTaskIds = completionRecords.map((record) => record.taskId);
+  async function handleToggleTask(task: Task) {
+    const activeUser = readActiveUser();
+
+    setFamilyTasks((currentTasks) =>
+      currentTasks.map((currentTask) =>
+        currentTask.id === task.id
+          ? {
+              ...currentTask,
+              done: !currentTask.done,
+              completedBy: !currentTask.done ? activeUser.id : undefined,
+              completedAt: !currentTask.done
+                ? new Date().toISOString()
+                : undefined,
+            }
+          : currentTask
+      )
+    );
+
+    await toggleTaskCompleted(task);
+    await loadData();
+  }
 
   const todaysFamilyTasks = familyTasks.filter((task) => isTaskForToday(task));
 
-  const openFamilyTasks = todaysFamilyTasks.filter(
-    (task) => !completedTaskIds.includes(task.id)
+  const openFamilyTasks = todaysFamilyTasks.filter((task) => !task.done);
+
+  const completedFamilyTasksToday = todaysFamilyTasks.filter((task) => {
+    if (!task.done || !task.completedAt) {
+      return false;
+    }
+
+    return getDateKey(new Date(task.completedAt)) === getTodayKey();
+  });
+
+  const completedByActiveUserToday = completedFamilyTasksToday.filter(
+    (task) => task.completedBy === activeUserId
   );
 
-  const completedFamilyTasksToday = todaysFamilyTasks.filter((task) =>
-    completedTaskIds.includes(task.id)
-  );
-
-  const archivedFamilyTasks = history.filter((task) => task.scope === "family");
-
-  const familyXpToday = completedFamilyTasksToday.length * XP_PER_TASK;
-  const familyXpArchived = archivedFamilyTasks.reduce(
+  const activeUserFamilyXpToday = completedByActiveUserToday.reduce(
     (sum, task) => sum + task.xp,
     0
   );
 
-  const totalFamilyXp = familyXpToday + familyXpArchived;
+  const activeUserArchivedFamilyXp = history
+    .filter((task) => task.completedBy === activeUserId)
+    .reduce((sum, task) => sum + task.xp, 0);
+
+  const activeUserTotalFamilyXp =
+    activeUserFamilyXpToday + activeUserArchivedFamilyXp;
 
   return (
     <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-6 shadow-sm ring-1 ring-black/5">
@@ -134,9 +164,9 @@ export default function FamilyTasksSummary() {
         </div>
 
         <div className="rounded-2xl bg-[#F7F4EA] px-4 py-3 text-right">
-          <p className="text-xs text-stone-500">Familie-XP</p>
+          <p className="text-xs text-stone-500">Din familie-XP</p>
           <p className="text-lg font-semibold text-[#24312A]">
-            {totalFamilyXp}
+            {activeUserTotalFamilyXp}
           </p>
         </div>
       </div>
@@ -145,21 +175,21 @@ export default function FamilyTasksSummary() {
         <div className="rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA] p-4">
           <p className="text-xs text-stone-500">Åpne i dag</p>
           <p className="mt-1 text-xl font-semibold text-[#24312A]">
-            {openFamilyTasks.length}
+            {isLoading ? "–" : openFamilyTasks.length}
           </p>
         </div>
 
         <div className="rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA] p-4">
           <p className="text-xs text-stone-500">Fullført</p>
           <p className="mt-1 text-xl font-semibold text-[#24312A]">
-            {completedFamilyTasksToday.length}
+            {isLoading ? "–" : completedFamilyTasksToday.length}
           </p>
         </div>
 
         <div className="rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA] p-4">
           <p className="text-xs text-stone-500">Arkivert</p>
           <p className="mt-1 text-xl font-semibold text-[#24312A]">
-            {archivedFamilyTasks.length}
+            {isLoading ? "–" : history.length}
           </p>
         </div>
       </div>
@@ -178,7 +208,13 @@ export default function FamilyTasksSummary() {
           </Link>
         </div>
 
-        {openFamilyTasks.length === 0 ? (
+        {isLoading ? (
+          <div className="rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA] p-4">
+            <p className="text-sm leading-6 text-stone-600">
+              Henter familieoppgaver …
+            </p>
+          </div>
+        ) : openFamilyTasks.length === 0 ? (
           <div className="rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA] p-4">
             <p className="text-sm leading-6 text-stone-600">
               Ingen åpne familieoppgaver i dag.
@@ -192,31 +228,34 @@ export default function FamilyTasksSummary() {
               return (
                 <div
                   key={task.id}
-                  className={`flex items-center justify-between gap-4 px-4 py-3 ${
+                  className={`flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between ${
                     index !== openFamilyTasks.length - 1
                       ? "border-b border-[#ECE3D4]"
                       : ""
                   }`}
                 >
                   <button
-                    onClick={() => toggleTask(task.id)}
-                    className="flex flex-1 items-center gap-3 text-left"
+                    type="button"
+                    onClick={() => handleToggleTask(task)}
+                    className="flex flex-1 items-start gap-3 text-left sm:items-center"
                   >
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white text-stone-300">
+                    <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white text-stone-300 sm:mt-0">
                       <Circle size={13} strokeWidth={2} />
                     </span>
 
-                    <div>
-                      <p className="font-medium text-[#24312A]">{task.title}</p>
+                    <div className="min-w-0">
+                      <p className="font-medium text-[#24312A]">
+                        {task.title}
+                      </p>
 
-                      <p className="mt-1 text-sm text-stone-500">
+                      <p className="mt-1 text-sm leading-5 text-stone-500">
                         {task.subtitle}
                         <CreatedByText createdBy={task.createdBy} />
                       </p>
                     </div>
                   </button>
 
-                  <div className="text-right">
+                  <div className="ml-9 text-left sm:ml-4 sm:text-right">
                     {formattedDate && (
                       <p className="text-xs text-stone-400">{formattedDate}</p>
                     )}
@@ -232,7 +271,7 @@ export default function FamilyTasksSummary() {
 
       {completedFamilyTasksToday.length > 0 && (
         <div className="mt-5 rounded-3xl border border-[#DDE8D4] bg-[#F4F8EF] p-5">
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-[#6F8F54]">
                 Fullført i dag
@@ -241,47 +280,69 @@ export default function FamilyTasksSummary() {
               <p className="mt-1 text-sm text-stone-600">
                 {completedFamilyTasksToday.length} familieoppgaver gjort
               </p>
+
+              {activeUserFamilyXpToday > 0 && (
+                <p className="mt-1 text-sm font-medium text-[#6F8F54]">
+                  +{activeUserFamilyXpToday} XP opptjent av deg
+                </p>
+              )}
             </div>
 
-            <p className="rounded-full bg-[#8EB069] px-3 py-1 text-sm font-semibold text-white">
-              +{familyXpToday} XP
-            </p>
+            {activeUserFamilyXpToday > 0 && (
+              <p className="w-fit rounded-full bg-[#8EB069] px-3 py-1 text-sm font-semibold text-white">
+                +{activeUserFamilyXpToday} XP
+              </p>
+            )}
           </div>
 
           <div className="overflow-hidden rounded-2xl bg-white/70">
-            {completedFamilyTasksToday.map((task, index) => (
-              <div
-                key={task.id}
-                className={`flex items-center justify-between gap-4 px-4 py-3 ${
-                  index !== completedFamilyTasksToday.length - 1
-                    ? "border-b border-[#E6EEDA]"
-                    : ""
-                }`}
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="grid h-5 w-5 place-items-center rounded-full bg-[#8EB069] text-white">
-                      <Check size={13} strokeWidth={2.5} />
-                    </span>
+            {completedFamilyTasksToday.map((task, index) => {
+              const isOwnCompletion = task.completedBy === activeUserId;
 
-                    <p className="font-medium text-[#24312A]">{task.title}</p>
+              return (
+                <div
+                  key={task.id}
+                  className={`flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between ${
+                    index !== completedFamilyTasksToday.length - 1
+                      ? "border-b border-[#E6EEDA]"
+                      : ""
+                  }`}
+                >
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="grid h-5 w-5 place-items-center rounded-full bg-[#8EB069] text-white">
+                        <Check size={13} strokeWidth={2.5} />
+                      </span>
+
+                      <p className="font-medium text-[#24312A]">
+                        {task.title}
+                      </p>
+
+                      {isOwnCompletion && (
+                        <span className="rounded-full bg-[#F4F8EF] px-2 py-1 text-xs font-semibold text-[#6F8F54]">
+                          +{task.xp} XP
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="mt-1 text-sm leading-5 text-stone-500">
+                      {task.time}
+                      <CreatedByText createdBy={task.createdBy} />
+                      <CompletedByText completedBy={task.completedBy} />
+                    </p>
                   </div>
 
-                  <p className="mt-1 text-sm text-stone-500">
-                    {task.time}
-                    <CreatedByText createdBy={task.createdBy} />
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleTask(task)}
+                    className="flex w-fit items-center gap-1 rounded-full bg-[#F7F4EA] px-3 py-1 text-xs font-medium text-[#24312A] transition hover:brightness-95"
+                  >
+                    <RotateCcw size={12} strokeWidth={2} />
+                    Angre
+                  </button>
                 </div>
-
-                <button
-                  onClick={() => toggleTask(task.id)}
-                  className="flex items-center gap-1 rounded-full bg-[#F7F4EA] px-3 py-1 text-xs font-medium text-[#24312A] transition hover:brightness-95"
-                >
-                  <RotateCcw size={12} strokeWidth={2} />
-                  Angre
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
