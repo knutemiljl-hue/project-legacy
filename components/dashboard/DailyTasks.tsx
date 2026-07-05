@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { dailyTasks } from "@/data/dashboard";
 
@@ -243,7 +244,7 @@ function CompletedTasks({
       {tasks.length === 0 ? (
         <p className="text-sm leading-6 text-stone-600">
           Når dere huker av oppgaver, samles de her i dag. I morgen flyttes de
-          automatisk til historikken.
+          automatisk til arkivet.
         </p>
       ) : (
         <div className="space-y-2">
@@ -294,30 +295,31 @@ function TaskHistorySummary({ history }: { history: ArchivedTask[] }) {
   const totalXp = history.reduce((sum, task) => sum + task.xp, 0);
 
   return (
-    <div className="rounded-3xl border border-stone-200 bg-[#F7F4EA] p-5">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-[#8D846F]">
-            Historikk
-          </p>
+    <Link
+      href="/archive"
+      className="flex items-center justify-between gap-4 rounded-3xl border border-stone-200 bg-[#F7F4EA] px-5 py-4 transition hover:brightness-95"
+    >
+      <div>
+        <p className="text-sm font-semibold uppercase tracking-wide text-[#8D846F]">
+          Arkiv
+        </p>
 
-          <h3 className="mt-1 text-xl font-semibold text-[#24312A]">
-            {history.length === 0
-              ? "Ingen arkiverte oppgaver ennå"
-              : `${history.length} oppgaver arkivert`}
-          </h3>
-
-          <p className="mt-1 text-sm text-stone-600">
-            Fullførte oppgaver fra tidligere dager flyttes hit automatisk.
-          </p>
-        </div>
-
-        <div className="rounded-2xl bg-white px-4 py-3 text-right">
-          <p className="text-xs text-stone-500">Total XP</p>
-          <p className="text-lg font-semibold text-[#24312A]">{totalXp}</p>
-        </div>
+        <p className="mt-1 text-sm text-stone-600">
+          {history.length === 0
+            ? "Ingen arkiverte oppgaver ennå"
+            : `${history.length} arkiverte oppgaver`}
+        </p>
       </div>
-    </div>
+
+      <div className="flex items-center gap-3">
+        <div className="rounded-2xl bg-white px-4 py-2 text-right">
+          <p className="text-xs text-stone-500">XP</p>
+          <p className="text-sm font-semibold text-[#24312A]">{totalXp}</p>
+        </div>
+
+        <p className="text-sm font-medium text-[#24312A]">Åpne →</p>
+      </div>
+    </Link>
   );
 }
 
