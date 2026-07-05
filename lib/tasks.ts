@@ -324,7 +324,9 @@ export async function readTotalXp(userId?: LegacyUserId) {
 }
 
 export function subscribeToTasks(onChange: () => void) {
-  const channelName = `legacy-tasks-${crypto.randomUUID()}`;
+  const channelName = `legacy-tasks-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
 
   const channel = supabase
     .channel(channelName)
