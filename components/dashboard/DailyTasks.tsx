@@ -5,6 +5,9 @@ import { dailyTasks } from "@/data/dashboard";
 
 const COMPLETED_TASKS_KEY = "project-legacy-daily-tasks";
 const CUSTOM_TASKS_KEY = "project-legacy-custom-daily-tasks";
+const COMPLETION_RECORDS_KEY = "project-legacy-task-completions";
+const TASK_HISTORY_KEY = "project-legacy-task-history";
+
 const XP_PER_TASK = 5;
 
 type TaskScope = "personal" | "family";
@@ -19,6 +22,36 @@ type Task = {
   done: boolean;
   isCustom: boolean;
 };
+
+type CompletionRecord = {
+  taskId: string;
+  completedAt: string;
+  xp: number;
+};
+
+type ArchivedTask = {
+  id: string;
+  taskId: string;
+  title: string;
+  subtitle: string;
+  date?: string;
+  time: string;
+  scope: TaskScope;
+  completedAt: string;
+  xp: number;
+};
+
+function getDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getTodayKey() {
+  return getDateKey(new Date());
+}
 
 function formatDate(date?: string) {
   if (!date) {
@@ -36,21 +69,63 @@ function getScopeLabel(scope: TaskScope) {
   return scope === "family" ? "Familie" : "Egen";
 }
 
+function getDefaultTasks(): Task[] {
+  return dailyTasks.map((task) => ({
+    id: task.id,
+    title: task.title,
+    subtitle: task.subtitle,
+    time: task.time,
+    scope: "personal",
+    done: task.done,
+    isCustom: false,
+  }));
+}
+
+function readCustomTasks(): Task[] {
+  const storedCustomTasks = window.localStorage.getItem(CUSTOM_TASKS_KEY);
+  const parsedCustomTasks = storedCustomTasks
+    ? JSON.parse(storedCustomTasks)
+    : [];
+
+  return parsedCustomTasks.map((task: Task) => ({
+    ...task,
+    scope: task.scope || "personal",
+    isCustom: true,
+  }));
+}
+
+function readTaskHistory(): ArchivedTask[] {
+  const storedHistory = window.localStorage.getItem(TASK_HISTORY_KEY);
+
+  return storedHistory ? JSON.parse(storedHistory) : [];
+}
+
+function saveCompletionRecords(records: CompletionRecord[]) {
+  window.localStorage.setItem(COMPLETION_RECORDS_KEY, JSON.stringify(records));
+
+  window.localStorage.setItem(
+    COMPLETED_TASKS_KEY,
+    JSON.stringify(records.map((record) => record.taskId))
+  );
+}
+
 function TaskList({
   title,
   tasks,
-  completedTasks,
+  completedRecords,
   onToggleTask,
   onDeleteTask,
 }: {
   title: string;
   tasks: Task[];
-  completedTasks: string[];
+  completedRecords: CompletionRecord[];
   onToggleTask: (taskId: string) => void;
   onDeleteTask: (taskId: string) => void;
 }) {
+  const completedTaskIds = completedRecords.map((record) => record.taskId);
+
   const visibleTasks = tasks.filter(
-    (task) => !completedTasks.includes(task.id)
+    (task) => !completedTaskIds.includes(task.id)
   );
 
   return (
@@ -159,8 +234,8 @@ function CompletedTasks({
 
       {tasks.length === 0 ? (
         <p className="text-sm leading-6 text-stone-600">
-          Når dere huker av oppgaver, samles de her slik at familien ser hva som
-          er gjort.
+          Når dere huker av oppgaver, samles de her i dag. I morgen flyttes de
+          automatisk til historikken.
         </p>
       ) : (
         <div className="space-y-2">
@@ -207,55 +282,64 @@ function CompletedTasks({
   );
 }
 
+function TaskHistorySummary({ history }: { history: ArchivedTask[] }) {
+  const totalXp = history.reduce((sum, task) => sum + task.xp, 0);
+
+  return (
+    <div className="rounded-3xl border border-stone-200 bg-[#F7F4EA] p-5">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-wide text-[#8D846F]">
+            Historikk
+          </p>
+
+          <h3 className="mt-1 text-xl font-semibold text-[#24312A]">
+            {history.length === 0
+              ? "Ingen arkiverte oppgaver ennå"
+              : `${history.length} oppgaver arkivert`}
+          </h3>
+
+          <p className="mt-1 text-sm text-stone-600">
+            Fullførte oppgaver fra tidligere dager flyttes hit automatisk.
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-white px-4 py-3 text-right">
+          <p className="text-xs text-stone-500">Total XP</p>
+          <p className="text-lg font-semibold text-[#24312A]">{totalXp}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DailyTasks() {
-  const [completedTasks, setCompletedTasks] = useState<string[]>([]);
+  const [completionRecords, setCompletionRecords] = useState<
+    CompletionRecord[]
+  >([]);
   const [customTasks, setCustomTasks] = useState<Task[]>([]);
+  const [taskHistory, setTaskHistory] = useState<ArchivedTask[]>([]);
 
-  const defaultTasks: Task[] = dailyTasks.map((task) => ({
-    id: task.id,
-    title: task.title,
-    subtitle: task.subtitle,
-    time: task.time,
-    scope: "personal",
-    done: task.done,
-    isCustom: false,
-  }));
-
+  const defaultTasks = getDefaultTasks();
   const allTasks: Task[] = [...defaultTasks, ...customTasks];
+
+  const completedTaskIds = completionRecords.map((record) => record.taskId);
 
   const personalTasks = allTasks.filter((task) => task.scope === "personal");
   const familyTasks = allTasks.filter((task) => task.scope === "family");
 
   const openTasks = allTasks.filter(
-    (task) => !completedTasks.includes(task.id)
+    (task) => !completedTaskIds.includes(task.id)
   );
 
   const completedTaskItems = allTasks.filter((task) =>
-    completedTasks.includes(task.id)
+    completedTaskIds.includes(task.id)
   );
 
-  const earnedXpToday = completedTaskItems.length * XP_PER_TASK;
+  const earnedXpToday = completionRecords.length * XP_PER_TASK;
 
   useEffect(() => {
-    const storedCompletedTasks =
-      window.localStorage.getItem(COMPLETED_TASKS_KEY);
-
-    if (storedCompletedTasks) {
-      setCompletedTasks(JSON.parse(storedCompletedTasks));
-    } else {
-      const defaultCompletedTasks = dailyTasks
-        .filter((task) => task.done)
-        .map((task) => task.id);
-
-      setCompletedTasks(defaultCompletedTasks);
-
-      window.localStorage.setItem(
-        COMPLETED_TASKS_KEY,
-        JSON.stringify(defaultCompletedTasks)
-      );
-    }
-
-    loadCustomTasks();
+    initializeTasks();
 
     window.addEventListener("project-legacy-tasks-updated", loadCustomTasks);
 
@@ -267,35 +351,132 @@ export default function DailyTasks() {
     };
   }, []);
 
+  function initializeTasks() {
+    const loadedCustomTasks = readCustomTasks();
+    const loadedHistory = readTaskHistory();
+
+    const storedCompletionRecords = window.localStorage.getItem(
+      COMPLETION_RECORDS_KEY
+    );
+
+    const storedCompletedTaskIds =
+      window.localStorage.getItem(COMPLETED_TASKS_KEY);
+
+    let records: CompletionRecord[] = [];
+
+    if (storedCompletionRecords) {
+      records = JSON.parse(storedCompletionRecords);
+    } else if (storedCompletedTaskIds) {
+      const parsedTaskIds: string[] = JSON.parse(storedCompletedTaskIds);
+
+      records = parsedTaskIds.map((taskId) => ({
+        taskId,
+        completedAt: new Date().toISOString(),
+        xp: XP_PER_TASK,
+      }));
+    } else {
+      records = dailyTasks
+        .filter((task) => task.done)
+        .map((task) => ({
+          taskId: task.id,
+          completedAt: new Date().toISOString(),
+          xp: XP_PER_TASK,
+        }));
+    }
+
+    const todayKey = getTodayKey();
+
+    const todayRecords = records.filter(
+      (record) => getDateKey(new Date(record.completedAt)) === todayKey
+    );
+
+    const oldRecords = records.filter(
+      (record) => getDateKey(new Date(record.completedAt)) !== todayKey
+    );
+
+    const allTasksForArchive = [...getDefaultTasks(), ...loadedCustomTasks];
+
+    const archivedTasks: ArchivedTask[] = oldRecords
+      .map((record) => {
+        const task = allTasksForArchive.find(
+          (item) => item.id === record.taskId
+        );
+
+        if (!task) {
+          return null;
+        }
+
+        return {
+          id: `${record.taskId}-${record.completedAt}`,
+          taskId: record.taskId,
+          title: task.title,
+          subtitle: task.subtitle,
+          date: task.date,
+          time: task.time,
+          scope: task.scope,
+          completedAt: record.completedAt,
+          xp: record.xp,
+        };
+      })
+      .filter(Boolean) as ArchivedTask[];
+
+    const existingHistoryIds = new Set(
+      loadedHistory.map((task) => `${task.taskId}-${task.completedAt}`)
+    );
+
+    const newArchivedTasks = archivedTasks.filter(
+      (task) => !existingHistoryIds.has(`${task.taskId}-${task.completedAt}`)
+    );
+
+    const nextHistory = [...loadedHistory, ...newArchivedTasks];
+
+    const archivedTaskIds = new Set(oldRecords.map((record) => record.taskId));
+
+    const remainingCustomTasks = loadedCustomTasks.filter(
+      (task) => !archivedTaskIds.has(task.id)
+    );
+
+    window.localStorage.setItem(
+      TASK_HISTORY_KEY,
+      JSON.stringify(nextHistory)
+    );
+
+    window.localStorage.setItem(
+      CUSTOM_TASKS_KEY,
+      JSON.stringify(remainingCustomTasks)
+    );
+
+    saveCompletionRecords(todayRecords);
+
+    setCustomTasks(remainingCustomTasks);
+    setCompletionRecords(todayRecords);
+    setTaskHistory(nextHistory);
+  }
+
   function loadCustomTasks() {
-    const storedCustomTasks = window.localStorage.getItem(CUSTOM_TASKS_KEY);
-    const parsedCustomTasks = storedCustomTasks
-      ? JSON.parse(storedCustomTasks)
-      : [];
-
-    const normalizedTasks: Task[] = parsedCustomTasks.map((task: Task) => ({
-      ...task,
-      scope: task.scope || "personal",
-      isCustom: true,
-    }));
-
-    setCustomTasks(normalizedTasks);
+    setCustomTasks(readCustomTasks());
   }
 
   function toggleTask(taskId: string) {
-    setCompletedTasks((currentTasks) => {
-      const isCompleted = currentTasks.includes(taskId);
-
-      const nextTasks = isCompleted
-        ? currentTasks.filter((id) => id !== taskId)
-        : [...currentTasks, taskId];
-
-      window.localStorage.setItem(
-        COMPLETED_TASKS_KEY,
-        JSON.stringify(nextTasks)
+    setCompletionRecords((currentRecords) => {
+      const isCompleted = currentRecords.some(
+        (record) => record.taskId === taskId
       );
 
-      return nextTasks;
+      const nextRecords = isCompleted
+        ? currentRecords.filter((record) => record.taskId !== taskId)
+        : [
+            ...currentRecords,
+            {
+              taskId,
+              completedAt: new Date().toISOString(),
+              xp: XP_PER_TASK,
+            },
+          ];
+
+      saveCompletionRecords(nextRecords);
+
+      return nextRecords;
     });
   }
 
@@ -309,15 +490,14 @@ export default function DailyTasks() {
       JSON.stringify(nextCustomTasks)
     );
 
-    setCompletedTasks((currentTasks) => {
-      const nextCompletedTasks = currentTasks.filter((id) => id !== taskId);
-
-      window.localStorage.setItem(
-        COMPLETED_TASKS_KEY,
-        JSON.stringify(nextCompletedTasks)
+    setCompletionRecords((currentRecords) => {
+      const nextRecords = currentRecords.filter(
+        (record) => record.taskId !== taskId
       );
 
-      return nextCompletedTasks;
+      saveCompletionRecords(nextRecords);
+
+      return nextRecords;
     });
   }
 
@@ -349,7 +529,7 @@ export default function DailyTasks() {
         <TaskList
           title="Egne oppgaver"
           tasks={personalTasks}
-          completedTasks={completedTasks}
+          completedRecords={completionRecords}
           onToggleTask={toggleTask}
           onDeleteTask={deleteTask}
         />
@@ -357,12 +537,14 @@ export default function DailyTasks() {
         <TaskList
           title="Familieoppgaver"
           tasks={familyTasks}
-          completedTasks={completedTasks}
+          completedRecords={completionRecords}
           onToggleTask={toggleTask}
           onDeleteTask={deleteTask}
         />
 
         <CompletedTasks tasks={completedTaskItems} onUndoTask={toggleTask} />
+
+        <TaskHistorySummary history={taskHistory} />
       </div>
     </section>
   );
