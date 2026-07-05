@@ -504,10 +504,12 @@ export default function FamilyCalendar({
     : upcomingEvents;
 
   const eventsByDate = useMemo(() => groupEventsByDate(events), [events]);
+
   const calendarDays = useMemo(
     () => getCalendarDays(visibleMonth),
     [visibleMonth]
   );
+
   const weekCalendarDays = useMemo(
     () => getWeekDays(selectedDate),
     [selectedDate]
@@ -548,7 +550,7 @@ export default function FamilyCalendar({
           </div>
         </div>
 
-        <div className="ml-15 w-fit rounded-2xl bg-[#F7F4EA] px-4 py-3 text-left sm:ml-0 sm:text-right">
+        <div className="w-fit rounded-2xl bg-[#F7F4EA] px-4 py-3 text-left sm:text-right">
           <p className="text-xs text-stone-500">Neste 7 dager</p>
           <p className="text-lg font-semibold text-[#24312A]">
             {upcomingEvents.length}

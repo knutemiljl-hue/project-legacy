@@ -8,32 +8,20 @@ import ShoppingList from "@/components/shopping/ShoppingList";
 
 export default function Home() {
   return (
-    <main className="mx-auto w-full max-w-[1720px] space-y-7">
+    <main className="mx-auto w-full max-w-[1720px] space-y-5 sm:space-y-7">
       <UserGreeting />
 
-      <section className="grid grid-cols-1 gap-7 xl:grid-cols-[1.08fr_1fr]">
-        <div className="order-1 xl:order-1">
+      <section className="grid grid-cols-1 gap-5 sm:gap-6 xl:grid-cols-[minmax(0,1.08fr)_minmax(420px,0.92fr)] xl:items-start">
+        <div className="space-y-5 sm:space-y-6">
           <ShoppingList compact />
-        </div>
-
-        <div className="order-2 xl:order-3">
           <DailyTasks />
-        </div>
-
-        <div className="order-3 xl:order-4">
           <LargeTasksSummary />
         </div>
 
-        <div className="order-4 xl:order-5">
-          <FamilyCalendar compact />
-        </div>
-
-        <div className="order-5 xl:order-6">
-          <FinanceSummary />
-        </div>
-
-        <div className="order-6 xl:order-2">
+        <div className="space-y-5 sm:space-y-6 xl:sticky xl:top-24">
           <CharacterSummary />
+          <FamilyCalendar compact />
+          <FinanceSummary />
         </div>
       </section>
     </main>
