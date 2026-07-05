@@ -1,17 +1,4 @@
-const reflections = [
-  {
-    week: "Uke 28",
-    title: "Første struktur på Project Legacy",
-    summary:
-      "Denne uken kom grunnmuren på plass. Appen begynner å føles som et faktisk system.",
-  },
-  {
-    week: "Uke 27",
-    title: "Familien først",
-    summary:
-      "Viktig påminnelse om at appen skal støtte familien, ikke konkurrere med den.",
-  },
-];
+import { pastReflections } from "@/data/journal";
 
 export default function PastReflections() {
   return (
@@ -23,7 +10,7 @@ export default function PastReflections() {
       </h2>
 
       <div className="mt-5 space-y-3">
-        {reflections.map((reflection) => (
+        {pastReflections.map((reflection) => (
           <article
             key={reflection.week}
             className="rounded-2xl bg-[#F7F4EA] p-4"

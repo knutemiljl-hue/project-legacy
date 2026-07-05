@@ -1,27 +1,7 @@
 import AppShell from "@/components/layout/AppShell";
 import FamilyHubCard from "@/components/family/FamilyHubCard";
 import FamilyStatus from "@/components/family/FamilyStatus";
-
-const familyCards = [
-  {
-    title: "Kalender",
-    description:
-      "Felles oversikt over avtaler, helsestasjon, jobb, trening og familietid.",
-    action: "Åpne kalender",
-  },
-  {
-    title: "Huskelister",
-    description:
-      "Delte lister for ting som må ordnes hjemme, før turer eller i hverdagen.",
-    action: "Åpne huskelister",
-  },
-  {
-    title: "Handleliste",
-    description:
-      "Én felles handleliste for mat, apotek, babyting og praktiske innkjøp.",
-    action: "Åpne handleliste",
-  },
-];
+import { familyCards } from "@/data/family";
 
 export default function FamilyPage() {
   return (

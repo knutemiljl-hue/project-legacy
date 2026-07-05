@@ -1,17 +1,4 @@
-const items = [
-  {
-    label: "Felles oppgaver",
-    value: "3",
-  },
-  {
-    label: "Avtaler denne uken",
-    value: "4",
-  },
-  {
-    label: "Åpne huskelister",
-    value: "2",
-  },
-];
+import { familyStatusItems } from "@/data/family";
 
 export default function FamilyStatus() {
   return (
@@ -27,11 +14,8 @@ export default function FamilyStatus() {
       </p>
 
       <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {items.map((item) => (
-          <div
-            key={item.label}
-            className="rounded-2xl bg-[#F7F4EA] p-4"
-          >
+        {familyStatusItems.map((item) => (
+          <div key={item.label} className="rounded-2xl bg-[#F7F4EA] p-4">
             <p className="text-2xl font-semibold text-[#24312A]">
               {item.value}
             </p>
