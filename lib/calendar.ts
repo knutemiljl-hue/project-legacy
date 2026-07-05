@@ -374,8 +374,12 @@ export async function deleteCalendarEvent(eventId: string) {
 }
 
 export function subscribeToCalendarEvents(onChange: () => void) {
+  const channelName = `legacy-calendar-events-${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
+
   const channel = supabase
-    .channel("legacy-calendar-events")
+    .channel(channelName)
     .on(
       "postgres_changes",
       {

@@ -7,7 +7,9 @@ import {
   CheckCircle2,
   Coins,
   Plus,
+  ShoppingBag,
   ShoppingBasket,
+  Sparkles,
 } from "lucide-react";
 import {
   CalendarEventType,
@@ -29,29 +31,55 @@ import {
   getRecurrenceLabel,
 } from "@/lib/tasks";
 
-const actions = [
+type QuickActionId = "task" | "purchase" | "calendar" | "shopping" | "finance";
+
+const primaryActions: {
+  id: QuickActionId;
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  tone: "green" | "gold" | "blue" | "stone";
+}[] = [
   {
     id: "task",
-    title: "Nytt gjøremål",
-    description: "Legg til en vanlig eller større oppgave.",
+    title: "Vanlig oppgave",
+    description: "Gjøremål for i dag eller senere.",
     icon: CheckCircle2,
+    tone: "green",
   },
   {
-    id: "shopping",
-    title: "Ny handleliste",
-    description: "Legg til én eller flere varer familien må kjøpe.",
-    icon: ShoppingBasket,
+    id: "purchase",
+    title: "Større ting / innkjøp",
+    description: "Ting som må kjøpes, avklares eller følges opp.",
+    icon: ShoppingBag,
+    tone: "gold",
   },
   {
     id: "calendar",
-    title: "Ny kalenderoppføring",
-    description: "Legg inn en avtale eller hendelse.",
+    title: "Kalenderavtale",
+    description: "Avtale, helsestasjon, jobb eller familieplan.",
     icon: CalendarDays,
+    tone: "blue",
   },
+  {
+    id: "shopping",
+    title: "Handlevarer",
+    description: "Legg til én eller flere varer på handlelisten.",
+    icon: ShoppingBasket,
+    tone: "stone",
+  },
+];
+
+const secondaryActions: {
+  id: QuickActionId;
+  title: string;
+  description: string;
+  icon: React.ElementType;
+}[] = [
   {
     id: "finance",
     title: "Økonomioppdatering",
-    description: "Oppdater fond, buffer, gjeld eller nettoformue.",
+    description: "Fond, buffer, gjeld eller nettoformue. Kommer senere.",
     icon: Coins,
   },
 ];
@@ -84,10 +112,98 @@ const calendarRecurrenceOptions: CalendarRecurrenceFrequency[] = [
   "monthly",
 ];
 
+function getActionToneClasses(tone: "green" | "gold" | "blue" | "stone") {
+  const classes = {
+    green: {
+      icon: "bg-[#EEF5E8] text-[#4F773D]",
+      active: "group-hover:border-[#B8D3A2] group-hover:bg-[#F6FAF2]",
+    },
+    gold: {
+      icon: "bg-[#FFF5D6] text-[#8D6D1F]",
+      active: "group-hover:border-[#EAD58B] group-hover:bg-[#FFF9E7]",
+    },
+    blue: {
+      icon: "bg-sky-50 text-sky-700",
+      active: "group-hover:border-sky-200 group-hover:bg-sky-50",
+    },
+    stone: {
+      icon: "bg-[#F7F4EA] text-[#8D846F]",
+      active: "group-hover:border-[#E2D8C7] group-hover:bg-[#FBF8F0]",
+    },
+  };
+
+  return classes[tone];
+}
+
+function ActionCard({
+  title,
+  description,
+  icon: Icon,
+  tone,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  tone: "green" | "gold" | "blue" | "stone";
+  onClick: () => void;
+}) {
+  const toneClasses = getActionToneClasses(tone);
+
+  return (
+    <button
+      type="button"
+      onPointerUp={onClick}
+      className={`group rounded-3xl border border-[#ECE3D4] bg-white p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${toneClasses.active}`}
+    >
+      <div
+        className={`mb-4 grid h-11 w-11 place-items-center rounded-2xl ${toneClasses.icon}`}
+      >
+        <Icon size={21} strokeWidth={2.25} />
+      </div>
+
+      <p className="font-semibold text-[#24312A]">{title}</p>
+
+      <p className="mt-2 text-sm leading-6 text-stone-600">{description}</p>
+    </button>
+  );
+}
+
+function SecondaryActionCard({
+  title,
+  description,
+  icon: Icon,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onPointerUp={onClick}
+      className="flex items-center gap-3 rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA] px-4 py-3 text-left transition hover:bg-white"
+    >
+      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white text-[#8D846F]">
+        <Icon size={19} strokeWidth={2.25} />
+      </div>
+
+      <div>
+        <p className="text-sm font-semibold text-[#24312A]">{title}</p>
+        <p className="mt-0.5 text-xs leading-5 text-stone-500">
+          {description}
+        </p>
+      </div>
+    </button>
+  );
+}
+
 export default function QuickAddMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [activeAction, setActiveAction] = useState<string | null>(null);
+  const [activeAction, setActiveAction] = useState<QuickActionId | null>(null);
 
   const [taskTitle, setTaskTitle] = useState("");
   const [taskSubtitle, setTaskSubtitle] = useState("");
@@ -129,8 +245,7 @@ export default function QuickAddMenu() {
     };
   }, [isOpen]);
 
-  function closeModal() {
-    setIsOpen(false);
+  function resetFormState() {
     setActiveAction(null);
 
     setTaskTitle("");
@@ -152,6 +267,27 @@ export default function QuickAddMenu() {
     setCalendarOwner("family");
     setCalendarRecurrenceFrequency("none");
     setCalendarRecurrenceUntil("");
+  }
+
+  function closeModal() {
+    setIsOpen(false);
+    resetFormState();
+  }
+
+  function openAction(actionId: QuickActionId) {
+    if (actionId === "task") {
+      setTaskCategory("task");
+    }
+
+    if (actionId === "purchase") {
+      setTaskCategory("purchase");
+    }
+
+    setActiveAction(actionId);
+  }
+
+  function goBackToMenu() {
+    setActiveAction(null);
   }
 
   async function saveTask() {
@@ -201,6 +337,35 @@ export default function QuickAddMenu() {
     closeModal();
   }
 
+  const isTaskFlow = activeAction === "task" || activeAction === "purchase";
+  const isPurchaseFlow = activeAction === "purchase";
+
+  const modalTitle =
+    activeAction === "task"
+      ? "Vanlig oppgave"
+      : activeAction === "purchase"
+        ? "Større ting / innkjøp"
+        : activeAction === "shopping"
+          ? "Handlevarer"
+          : activeAction === "calendar"
+            ? "Kalenderavtale"
+            : activeAction === "finance"
+              ? "Økonomioppdatering"
+              : "Hva vil du legge til?";
+
+  const modalSubtitle =
+    activeAction === "task"
+      ? "Legg inn et gjøremål for deg selv eller familien."
+      : activeAction === "purchase"
+        ? "Legg inn større ting som må kjøpes, avklares eller følges opp."
+        : activeAction === "shopping"
+          ? "Legg til én eller flere varer på handlelisten."
+          : activeAction === "calendar"
+            ? "Legg inn avtaler, hendelser eller faste planer."
+            : activeAction === "finance"
+              ? "Denne kommer vi tilbake til senere."
+              : "Velg hva du vil opprette i Project Legacy.";
+
   const modal =
     isOpen && isMounted
       ? createPortal(
@@ -211,102 +376,87 @@ export default function QuickAddMenu() {
             <div className="flex min-h-dvh items-end justify-center sm:items-start sm:px-6 sm:pt-28">
               <div
                 onPointerUp={(event) => event.stopPropagation()}
-                className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[2rem] border border-stone-200 bg-white p-5 shadow-2xl sm:max-h-[82vh] sm:max-w-xl sm:rounded-3xl sm:p-6"
+                className="max-h-[92dvh] w-full overflow-y-auto rounded-t-[2rem] border border-stone-200 bg-white p-5 shadow-2xl sm:max-h-[82vh] sm:max-w-2xl sm:rounded-3xl sm:p-6"
               >
                 <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-stone-200 sm:hidden" />
 
                 <div className="mb-6 flex items-start justify-between gap-4">
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-medium text-[#8D846F]">
                       Legg til nytt
                     </p>
 
                     <h2 className="mt-1 text-2xl font-semibold text-[#24312A]">
-                      {activeAction === "task"
-                        ? "Nytt gjøremål"
-                        : activeAction === "shopping"
-                          ? "Legg til varer"
-                          : activeAction === "calendar"
-                            ? "Ny kalenderoppføring"
-                            : "Hva vil du opprette?"}
+                      {modalTitle}
                     </h2>
+
+                    <p className="mt-2 text-sm leading-6 text-stone-500">
+                      {modalSubtitle}
+                    </p>
                   </div>
 
                   <button
                     type="button"
                     onPointerUp={closeModal}
-                    className="rounded-full bg-[#F7F4EA] px-3 py-1 text-sm font-medium text-[#24312A] transition hover:brightness-95"
+                    className="shrink-0 rounded-full bg-[#F7F4EA] px-3 py-1 text-sm font-medium text-[#24312A] transition hover:brightness-95"
                   >
                     Lukk
                   </button>
                 </div>
 
                 {!activeAction && (
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {actions.map((action) => {
-                      const Icon = action.icon;
-
-                      return (
-                        <button
-                          type="button"
-                          key={action.id}
-                          onPointerUp={() => setActiveAction(action.id)}
-                          className="rounded-2xl bg-[#F7F4EA] p-4 text-left transition hover:brightness-95"
-                        >
-                          <div className="mb-3 grid h-10 w-10 place-items-center rounded-2xl bg-white text-[#4F773D]">
-                            <Icon size={20} strokeWidth={2} />
-                          </div>
-
-                          <p className="font-semibold text-[#24312A]">
-                            {action.title}
-                          </p>
-
-                          <p className="mt-2 text-sm leading-6 text-stone-600">
-                            {action.description}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {activeAction === "task" && (
-                  <div className="space-y-4 pb-4 sm:pb-0">
+                  <div className="space-y-5">
                     <div>
-                      <span className="text-sm font-medium text-[#24312A]">
-                        Kategori
-                      </span>
+                      <div className="mb-3 flex items-center gap-2">
+                        <Sparkles
+                          size={15}
+                          strokeWidth={2.25}
+                          className="text-[#4F773D]"
+                        />
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
+                          Mest brukt
+                        </p>
+                      </div>
 
-                      <div className="mt-2 grid grid-cols-2 gap-3">
-                        <button
-                          type="button"
-                          onPointerUp={() => setTaskCategory("task")}
-                          className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
-                            taskCategory === "task"
-                              ? "border-[#8EB069] bg-[#EEF5E8] text-[#24312A]"
-                              : "border-stone-200 bg-[#F7F4EA] text-stone-500 hover:brightness-95"
-                          }`}
-                        >
-                          Vanlig oppgave
-                        </button>
-
-                        <button
-                          type="button"
-                          onPointerUp={() => setTaskCategory("purchase")}
-                          className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
-                            taskCategory === "purchase"
-                              ? "border-[#8EB069] bg-[#EEF5E8] text-[#24312A]"
-                              : "border-stone-200 bg-[#F7F4EA] text-stone-500 hover:brightness-95"
-                          }`}
-                        >
-                          Større oppgave
-                        </button>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {primaryActions.map((action) => (
+                          <ActionCard
+                            key={action.id}
+                            title={action.title}
+                            description={action.description}
+                            icon={action.icon}
+                            tone={action.tone}
+                            onClick={() => openAction(action.id)}
+                          />
+                        ))}
                       </div>
                     </div>
 
                     <div>
+                      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
+                        Senere
+                      </p>
+
+                      <div className="grid grid-cols-1 gap-3">
+                        {secondaryActions.map((action) => (
+                          <SecondaryActionCard
+                            key={action.id}
+                            title={action.title}
+                            description={action.description}
+                            icon={action.icon}
+                            onClick={() => openAction(action.id)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {isTaskFlow && (
+                  <div className="space-y-4 pb-4 sm:pb-0">
+                    <div>
                       <span className="text-sm font-medium text-[#24312A]">
-                        Type oppgave
+                        Gjelder
                       </span>
 
                       <div className="mt-2 grid grid-cols-2 gap-3">
@@ -346,7 +496,7 @@ export default function QuickAddMenu() {
                         onChange={(event) => setTaskTitle(event.target.value)}
                         className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F] sm:text-sm"
                         placeholder={
-                          taskCategory === "purchase"
+                          isPurchaseFlow
                             ? "F.eks. Kjøpe stellebord eller ordne barnerom"
                             : "F.eks. Bestill dåpsgave"
                         }
@@ -365,7 +515,7 @@ export default function QuickAddMenu() {
                         }
                         className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F] sm:text-sm"
                         placeholder={
-                          taskCategory === "purchase"
+                          isPurchaseFlow
                             ? "F.eks. Litt større ting som må følges opp"
                             : "F.eks. Familie / praktisk"
                         }
@@ -443,7 +593,7 @@ export default function QuickAddMenu() {
 
                         <p className="mt-2 text-xs leading-5 text-stone-500">
                           Lager maks 52 forekomster. Hvis dato ikke velges,
-                          lagres bare én vanlig oppgave.
+                          lagres bare én oppføring.
                         </p>
                       </label>
                     )}
@@ -451,7 +601,7 @@ export default function QuickAddMenu() {
                     <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-between">
                       <button
                         type="button"
-                        onPointerUp={() => setActiveAction(null)}
+                        onPointerUp={goBackToMenu}
                         className="rounded-2xl bg-[#F7F4EA] px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
                       >
                         Tilbake
@@ -462,7 +612,7 @@ export default function QuickAddMenu() {
                         onPointerUp={saveTask}
                         className="rounded-2xl bg-[#3F6F35] px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:brightness-110"
                       >
-                        Lagre
+                        {isPurchaseFlow ? "Lagre større ting" : "Lagre oppgave"}
                       </button>
                     </div>
                   </div>
@@ -492,7 +642,7 @@ export default function QuickAddMenu() {
                     <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-between">
                       <button
                         type="button"
-                        onPointerUp={() => setActiveAction(null)}
+                        onPointerUp={goBackToMenu}
                         className="rounded-2xl bg-[#F7F4EA] px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
                       >
                         Tilbake
@@ -665,7 +815,7 @@ export default function QuickAddMenu() {
 
                         <p className="mt-2 text-xs leading-5 text-stone-500">
                           Lager maks 52 forekomster. Hvis dato ikke velges,
-                          lagres bare én vanlig avtale.
+                          lagres bare én avtale.
                         </p>
                       </label>
                     )}
@@ -673,7 +823,7 @@ export default function QuickAddMenu() {
                     <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-between">
                       <button
                         type="button"
-                        onPointerUp={() => setActiveAction(null)}
+                        onPointerUp={goBackToMenu}
                         className="rounded-2xl bg-[#F7F4EA] px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
                       >
                         Tilbake
@@ -690,28 +840,30 @@ export default function QuickAddMenu() {
                   </div>
                 )}
 
-                {activeAction &&
-                  activeAction !== "task" &&
-                  activeAction !== "shopping" &&
-                  activeAction !== "calendar" && (
-                    <div className="rounded-2xl bg-[#F7F4EA] p-5">
-                      <p className="font-semibold text-[#24312A]">
-                        Kommer snart
-                      </p>
-
-                      <p className="mt-2 text-sm leading-6 text-stone-600">
-                        Denne funksjonen bygger vi senere.
-                      </p>
-
-                      <button
-                        type="button"
-                        onPointerUp={() => setActiveAction(null)}
-                        className="mt-5 rounded-2xl bg-white px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
-                      >
-                        Tilbake
-                      </button>
+                {activeAction === "finance" && (
+                  <div className="rounded-3xl bg-[#F7F4EA] p-5">
+                    <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white text-[#8D846F] shadow-sm">
+                      <Coins size={22} strokeWidth={2.25} />
                     </div>
-                  )}
+
+                    <p className="mt-4 font-semibold text-[#24312A]">
+                      Kommer snart
+                    </p>
+
+                    <p className="mt-2 text-sm leading-6 text-stone-600">
+                      Økonomioppdatering kan vi koble på senere med egne felter
+                      for fond, buffer, gjeld og nettoformue.
+                    </p>
+
+                    <button
+                      type="button"
+                      onPointerUp={goBackToMenu}
+                      className="mt-5 rounded-2xl bg-white px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
+                    >
+                      Tilbake
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>,
