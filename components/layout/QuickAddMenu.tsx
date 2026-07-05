@@ -12,9 +12,9 @@ const actions = [
     description: "Legg til en oppgave for deg eller familien.",
   },
   {
-    id: "list",
-    title: "Ny huskeliste",
-    description: "Opprett en liste for ting som må huskes.",
+    id: "shopping",
+    title: "Ny handleliste",
+    description: "Legg til varer eller ting familien må kjøpe.",
   },
   {
     id: "calendar",
@@ -28,8 +28,12 @@ const actions = [
   },
 ];
 
-function getTodayAsInputDate() {
-  return new Date().toISOString().slice(0, 10);
+function getLocalDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 export default function QuickAddMenu() {
@@ -39,7 +43,7 @@ export default function QuickAddMenu() {
 
   const [taskTitle, setTaskTitle] = useState("");
   const [taskSubtitle, setTaskSubtitle] = useState("");
-  const [taskDate, setTaskDate] = useState(getTodayAsInputDate());
+  const [taskDate, setTaskDate] = useState(getLocalDateKey());
   const [taskTime, setTaskTime] = useState("");
   const [taskScope, setTaskScope] = useState<"personal" | "family">("personal");
 
@@ -52,7 +56,7 @@ export default function QuickAddMenu() {
     setActiveAction(null);
     setTaskTitle("");
     setTaskSubtitle("");
-    setTaskDate(getTodayAsInputDate());
+    setTaskDate(getLocalDateKey());
     setTaskTime("");
     setTaskScope("personal");
   }

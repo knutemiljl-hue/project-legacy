@@ -48,7 +48,7 @@ function notifyXpUpdated() {
   }, 0);
 }
 
-function getDateKey(date: Date) {
+function getLocalDateKey(date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
@@ -56,8 +56,24 @@ function getDateKey(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+function getDateKey(date: Date) {
+  return getLocalDateKey(date);
+}
+
 function getTodayKey() {
-  return getDateKey(new Date());
+  return getLocalDateKey();
+}
+
+function isTaskForToday(task: Task) {
+  if (!task.isCustom) {
+    return true;
+  }
+
+  if (!task.date) {
+    return true;
+  }
+
+  return task.date === getTodayKey();
 }
 
 function formatDate(date?: string) {
@@ -65,11 +81,14 @@ function formatDate(date?: string) {
     return null;
   }
 
+  const [year, month, day] = date.split("-").map(Number);
+  const localDate = new Date(year, month - 1, day);
+
   return new Intl.DateTimeFormat("nb-NO", {
     weekday: "short",
     day: "numeric",
     month: "short",
-  }).format(new Date(date));
+  }).format(localDate);
 }
 
 function getScopeLabel(scope: TaskScope) {
@@ -134,7 +153,7 @@ function TaskList({
   const completedTaskIds = completedRecords.map((record) => record.taskId);
 
   const visibleTasks = tasks.filter(
-    (task) => !completedTaskIds.includes(task.id)
+    (task) => isTaskForToday(task) && !completedTaskIds.includes(task.id)
   );
 
   return (
@@ -332,21 +351,22 @@ export default function DailyTasks() {
 
   const defaultTasks = getDefaultTasks();
   const allTasks: Task[] = [...defaultTasks, ...customTasks];
+  const todayTasks = allTasks.filter((task) => isTaskForToday(task));
 
   const completedTaskIds = completionRecords.map((record) => record.taskId);
 
   const personalTasks = allTasks.filter((task) => task.scope === "personal");
   const familyTasks = allTasks.filter((task) => task.scope === "family");
 
-  const openTasks = allTasks.filter(
+  const openTasks = todayTasks.filter(
     (task) => !completedTaskIds.includes(task.id)
   );
 
-  const completedTaskItems = allTasks.filter((task) =>
+  const completedTaskItems = todayTasks.filter((task) =>
     completedTaskIds.includes(task.id)
   );
 
-  const earnedXpToday = completionRecords.length * XP_PER_TASK;
+  const earnedXpToday = completedTaskItems.length * XP_PER_TASK;
 
   useEffect(() => {
     initializeTasks();

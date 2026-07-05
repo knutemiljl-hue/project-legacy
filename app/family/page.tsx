@@ -7,12 +7,12 @@ const familyCards = [
     description: "Avtaler, helsestasjon, familieselskap og felles planer.",
   },
   {
-    title: "Huskelister",
-    description: "Ting familien må huske, kjøpe, pakke eller ordne.",
-  },
-  {
     title: "Handleliste",
     description: "Felles liste for mat, bleier, utstyr og hverdagslogistikk.",
+  },
+  {
+    title: "Praktisk hjemme",
+    description: "Små ting som må ordnes for at hverdagen skal flyte bedre.",
   },
 ];
 

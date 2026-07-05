@@ -48,16 +48,39 @@ function notifyUpdates() {
   }, 0);
 }
 
+function getLocalDateKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getTodayKey() {
+  return getLocalDateKey();
+}
+
+function isTaskForToday(task: Task) {
+  if (!task.date) {
+    return true;
+  }
+
+  return task.date === getTodayKey();
+}
+
 function formatDate(date?: string) {
   if (!date) {
     return null;
   }
 
+  const [year, month, day] = date.split("-").map(Number);
+  const localDate = new Date(year, month - 1, day);
+
   return new Intl.DateTimeFormat("nb-NO", {
     weekday: "short",
     day: "numeric",
     month: "short",
-  }).format(new Date(date));
+  }).format(localDate);
 }
 
 function readFamilyTasks() {
@@ -149,11 +172,13 @@ export default function FamilyTasksSummary() {
 
   const completedTaskIds = completionRecords.map((record) => record.taskId);
 
-  const openFamilyTasks = familyTasks.filter(
+  const todaysFamilyTasks = familyTasks.filter((task) => isTaskForToday(task));
+
+  const openFamilyTasks = todaysFamilyTasks.filter(
     (task) => !completedTaskIds.includes(task.id)
   );
 
-  const completedFamilyTasksToday = familyTasks.filter((task) =>
+  const completedFamilyTasksToday = todaysFamilyTasks.filter((task) =>
     completedTaskIds.includes(task.id)
   );
 
@@ -194,7 +219,7 @@ export default function FamilyTasksSummary() {
 
       <div className="mb-6 grid grid-cols-3 gap-3">
         <div className="rounded-2xl bg-[#F7F4EA] p-4">
-          <p className="text-xs text-stone-500">Åpne</p>
+          <p className="text-xs text-stone-500">Åpne i dag</p>
           <p className="mt-1 text-xl font-semibold text-[#24312A]">
             {openFamilyTasks.length}
           </p>
@@ -218,7 +243,7 @@ export default function FamilyTasksSummary() {
       <div>
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-[#8D846F]">
-            Åpne nå
+            Åpne i dag
           </h3>
 
           <Link
@@ -232,7 +257,7 @@ export default function FamilyTasksSummary() {
         {openFamilyTasks.length === 0 ? (
           <div className="rounded-2xl bg-[#F7F4EA] p-4">
             <p className="text-sm leading-6 text-stone-600">
-              Ingen åpne familieoppgaver akkurat nå.
+              Ingen åpne familieoppgaver i dag.
             </p>
           </div>
         ) : (
