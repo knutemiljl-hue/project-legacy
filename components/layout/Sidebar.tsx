@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { legacyUsers, readActiveUser } from "@/lib/users";
 
 const navigationItems = [
   {
@@ -28,6 +30,29 @@ const navigationItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [activeUser, setActiveUser] = useState(legacyUsers[0]);
+
+  useEffect(() => {
+    function updateActiveUser() {
+      setActiveUser(readActiveUser());
+    }
+
+    updateActiveUser();
+
+    window.addEventListener(
+      "project-legacy-active-user-updated",
+      updateActiveUser
+    );
+    window.addEventListener("storage", updateActiveUser);
+
+    return () => {
+      window.removeEventListener(
+        "project-legacy-active-user-updated",
+        updateActiveUser
+      );
+      window.removeEventListener("storage", updateActiveUser);
+    };
+  }, []);
 
   return (
     <aside className="hidden min-h-screen w-64 shrink-0 border-r border-[#E2D8C7] bg-white/35 px-5 py-6 backdrop-blur-xl lg:flex lg:flex-col">
@@ -80,13 +105,15 @@ export default function Sidebar() {
 
       <div className="mt-auto rounded-3xl bg-white/55 p-4 shadow-sm ring-1 ring-black/5">
         <div className="mb-3 grid h-9 w-9 place-items-center rounded-2xl bg-[#EEF5E8] text-sm font-semibold text-[#4F773D]">
-          KE
+          {activeUser.initials}
         </div>
 
-        <p className="text-sm font-semibold text-[#24312A]">Knut Emil</p>
+        <p className="text-sm font-semibold text-[#24312A]">
+          {activeUser.name}
+        </p>
 
         <p className="mt-2 text-sm leading-6 text-stone-500">
-          Små steg i dag. Sterkere bånd i morgen.
+          Aktiv bruker i Project Legacy.
         </p>
       </div>
     </aside>

@@ -1,3 +1,5 @@
+import { LegacyUserId, readActiveUser } from "@/lib/users";
+
 export const SHOPPING_ITEMS_KEY = "project-legacy-shopping-items";
 
 export type ShoppingItem = {
@@ -5,6 +7,7 @@ export type ShoppingItem = {
   title: string;
   completed: boolean;
   createdAt: string;
+  createdBy?: LegacyUserId;
 };
 
 function canUseStorage() {
@@ -70,6 +73,7 @@ export function addShoppingItems(input: string) {
     return;
   }
 
+  const activeUser = readActiveUser();
   const existingItems = readShoppingItems();
 
   const newItems: ShoppingItem[] = titles.map((title, index) => ({
@@ -77,6 +81,7 @@ export function addShoppingItems(input: string) {
     title,
     completed: false,
     createdAt: new Date().toISOString(),
+    createdBy: activeUser.id,
   }));
 
   saveShoppingItems([...existingItems, ...newItems]);

@@ -14,6 +14,7 @@ import {
   readCustomTasks,
   saveCustomTasks,
 } from "@/lib/tasks";
+import { readActiveUser } from "@/lib/users";
 
 const actions = [
   {
@@ -116,6 +117,7 @@ export default function QuickAddMenu() {
       return;
     }
 
+    const activeUser = readActiveUser();
     const existingTasks = readCustomTasks();
 
     const newTask = {
@@ -127,6 +129,7 @@ export default function QuickAddMenu() {
       scope: taskScope,
       done: false,
       isCustom: true,
+      createdBy: activeUser.id,
     };
 
     saveCustomTasks([...existingTasks, newTask]);

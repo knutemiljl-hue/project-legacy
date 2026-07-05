@@ -1,3 +1,5 @@
+import { LegacyUserId } from "@/lib/users";
+
 export const COMPLETED_TASKS_KEY = "project-legacy-daily-tasks";
 export const CUSTOM_TASKS_KEY = "project-legacy-custom-daily-tasks";
 export const COMPLETION_RECORDS_KEY = "project-legacy-task-completions";
@@ -17,6 +19,7 @@ export type Task = {
   scope: TaskScope;
   done: boolean;
   isCustom: boolean;
+  createdBy?: LegacyUserId;
 };
 
 export type CompletionRecord = {
@@ -35,6 +38,7 @@ export type ArchivedTask = {
   scope: TaskScope;
   completedAt: string;
   xp: number;
+  createdBy?: LegacyUserId;
 };
 
 export type DashboardTask = {
@@ -171,6 +175,7 @@ export function readCustomTasks(): Task[] {
     scope: task.scope ?? "personal",
     done: task.done ?? false,
     isCustom: true,
+    createdBy: task.createdBy,
   }));
 }
 

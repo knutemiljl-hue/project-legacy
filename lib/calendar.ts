@@ -1,3 +1,5 @@
+import { LegacyUserId, readActiveUser } from "@/lib/users";
+
 export const CALENDAR_EVENTS_KEY = "project-legacy-calendar-events";
 
 export type CalendarEventType =
@@ -16,6 +18,7 @@ export type CalendarEvent = {
   location?: string;
   type: CalendarEventType;
   createdAt: string;
+  createdBy?: LegacyUserId;
 };
 
 export type CalendarEventInput = {
@@ -137,6 +140,7 @@ export function addCalendarEvent(event: CalendarEventInput) {
     return;
   }
 
+  const activeUser = readActiveUser();
   const existingEvents = readCalendarEvents();
 
   const newEvent: CalendarEvent = {
@@ -147,12 +151,16 @@ export function addCalendarEvent(event: CalendarEventInput) {
     location: event.location?.trim() || undefined,
     type: event.type,
     createdAt: new Date().toISOString(),
+    createdBy: activeUser.id,
   };
 
   saveCalendarEvents(sortCalendarEvents([...existingEvents, newEvent]));
 }
 
-export function updateCalendarEvent(eventId: string, updatedEvent: CalendarEventInput) {
+export function updateCalendarEvent(
+  eventId: string,
+  updatedEvent: CalendarEventInput
+) {
   const trimmedTitle = updatedEvent.title.trim();
 
   if (!trimmedTitle || !updatedEvent.date) {
