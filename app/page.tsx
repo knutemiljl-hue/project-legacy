@@ -3,7 +3,6 @@ import CharacterSummary from "@/components/dashboard/CharacterSummary";
 import DailyTasks from "@/components/dashboard/DailyTasks";
 import FinanceSummary from "@/components/dashboard/FinanceSummary";
 import StatusCard from "@/components/dashboard/StatusCard";
-import UpcomingEvents from "@/components/dashboard/UpcomingEvents";
 import ShoppingList from "@/components/shopping/ShoppingList";
 import { statusCards } from "@/data/dashboard";
 
@@ -41,7 +40,6 @@ export default function Home() {
         <div className="space-y-6">
           <FamilyCalendar compact />
           <CharacterSummary />
-          <UpcomingEvents />
         </div>
       </section>
     </main>
