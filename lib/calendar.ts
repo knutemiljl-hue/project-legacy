@@ -1,6 +1,5 @@
+import { supabase } from "@/lib/supabase";
 import { LegacyUserId, readActiveUser } from "@/lib/users";
-
-export const CALENDAR_EVENTS_KEY = "project-legacy-calendar-events";
 
 export type CalendarEventType =
   | "family"
@@ -29,44 +28,36 @@ export type CalendarEventInput = {
   type: CalendarEventType;
 };
 
-function canUseStorage() {
-  return typeof window !== "undefined";
-}
+type CalendarEventRow = {
+  id: string;
+  title: string;
+  event_date: string;
+  event_time: string;
+  location: string | null;
+  type: CalendarEventType;
+  created_by: LegacyUserId | null;
+  created_at: string;
+};
 
-function readJson<T>(key: string, fallback: T): T {
-  if (!canUseStorage()) {
-    return fallback;
-  }
-
-  const storedValue = window.localStorage.getItem(key);
-
-  if (!storedValue) {
-    return fallback;
-  }
-
-  try {
-    return JSON.parse(storedValue) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-function writeJson<T>(key: string, value: T) {
-  if (!canUseStorage()) {
-    return;
-  }
-
-  window.localStorage.setItem(key, JSON.stringify(value));
+function mapCalendarEvent(row: CalendarEventRow): CalendarEvent {
+  return {
+    id: row.id,
+    title: row.title,
+    date: row.event_date,
+    time: row.event_time,
+    location: row.location ?? undefined,
+    type: row.type,
+    createdAt: row.created_at,
+    createdBy: row.created_by ?? undefined,
+  };
 }
 
 export function notifyCalendarUpdated() {
-  if (!canUseStorage()) {
+  if (typeof window === "undefined") {
     return;
   }
 
-  window.setTimeout(() => {
-    window.dispatchEvent(new Event("project-legacy-calendar-updated"));
-  }, 0);
+  window.dispatchEvent(new Event("project-legacy-calendar-updated"));
 }
 
 export function getLocalDateKey(date = new Date()) {
@@ -75,13 +66,6 @@ export function getLocalDateKey(date = new Date()) {
   const day = String(date.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
-}
-
-export function getMonthKey(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-
-  return `${year}-${month}`;
 }
 
 export function formatCalendarDate(date: string) {
@@ -115,25 +99,36 @@ export function getEventTypeLabel(type: CalendarEventType) {
   return labels[type];
 }
 
-export function readCalendarEvents(): CalendarEvent[] {
-  return readJson<CalendarEvent[]>(CALENDAR_EVENTS_KEY, []);
-}
-
-export function saveCalendarEvents(events: CalendarEvent[]) {
-  writeJson(CALENDAR_EVENTS_KEY, events);
-  notifyCalendarUpdated();
-}
-
 export function sortCalendarEvents(events: CalendarEvent[]) {
   return [...events].sort((a, b) => {
-    const aValue = `${a.date} ${a.time || "23:59"}`;
-    const bValue = `${b.date} ${b.time || "23:59"}`;
+    if (a.date !== b.date) {
+      return a.date.localeCompare(b.date);
+    }
 
-    return aValue.localeCompare(bValue);
+    return a.time.localeCompare(b.time);
   });
 }
 
-export function addCalendarEvent(event: CalendarEventInput) {
+export async function readCalendarEvents(): Promise<CalendarEvent[]> {
+  const { data, error } = await supabase
+    .from("legacy_calendar_events")
+    .select(
+      "id, title, event_date, event_time, location, type, created_by, created_at"
+    )
+    .order("event_date", { ascending: true })
+    .order("event_time", { ascending: true });
+
+  if (error) {
+    console.error("Kunne ikke hente kalender:", error);
+    return [];
+  }
+
+  return sortCalendarEvents(
+    (data ?? []).map((event) => mapCalendarEvent(event as CalendarEventRow))
+  );
+}
+
+export async function addCalendarEvent(event: CalendarEventInput) {
   const trimmedTitle = event.title.trim();
 
   if (!trimmedTitle || !event.date) {
@@ -141,23 +136,25 @@ export function addCalendarEvent(event: CalendarEventInput) {
   }
 
   const activeUser = readActiveUser();
-  const existingEvents = readCalendarEvents();
 
-  const newEvent: CalendarEvent = {
-    id: `calendar-${Date.now()}`,
+  const { error } = await supabase.from("legacy_calendar_events").insert({
     title: trimmedTitle,
-    date: event.date,
-    time: event.time || "Hele dagen",
-    location: event.location?.trim() || undefined,
+    event_date: event.date,
+    event_time: event.time || "Hele dagen",
+    location: event.location?.trim() || null,
     type: event.type,
-    createdAt: new Date().toISOString(),
-    createdBy: activeUser.id,
-  };
+    created_by: activeUser.id,
+  });
 
-  saveCalendarEvents(sortCalendarEvents([...existingEvents, newEvent]));
+  if (error) {
+    console.error("Kunne ikke legge til kalenderavtale:", error);
+    return;
+  }
+
+  notifyCalendarUpdated();
 }
 
-export function updateCalendarEvent(
+export async function updateCalendarEvent(
   eventId: string,
   updatedEvent: CalendarEventInput
 ) {
@@ -167,29 +164,56 @@ export function updateCalendarEvent(
     return;
   }
 
-  const existingEvents = readCalendarEvents();
-
-  const nextEvents = existingEvents.map((event) => {
-    if (event.id !== eventId) {
-      return event;
-    }
-
-    return {
-      ...event,
+  const { error } = await supabase
+    .from("legacy_calendar_events")
+    .update({
       title: trimmedTitle,
-      date: updatedEvent.date,
-      time: updatedEvent.time || "Hele dagen",
-      location: updatedEvent.location?.trim() || undefined,
+      event_date: updatedEvent.date,
+      event_time: updatedEvent.time || "Hele dagen",
+      location: updatedEvent.location?.trim() || null,
       type: updatedEvent.type,
-    };
-  });
+    })
+    .eq("id", eventId);
 
-  saveCalendarEvents(sortCalendarEvents(nextEvents));
+  if (error) {
+    console.error("Kunne ikke oppdatere kalenderavtale:", error);
+    return;
+  }
+
+  notifyCalendarUpdated();
 }
 
-export function deleteCalendarEvent(eventId: string) {
-  const existingEvents = readCalendarEvents();
-  const nextEvents = existingEvents.filter((event) => event.id !== eventId);
+export async function deleteCalendarEvent(eventId: string) {
+  const { error } = await supabase
+    .from("legacy_calendar_events")
+    .delete()
+    .eq("id", eventId);
 
-  saveCalendarEvents(nextEvents);
+  if (error) {
+    console.error("Kunne ikke slette kalenderavtale:", error);
+    return;
+  }
+
+  notifyCalendarUpdated();
+}
+
+export function subscribeToCalendarEvents(onChange: () => void) {
+  const channel = supabase
+    .channel("legacy-calendar-events")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "legacy_calendar_events",
+      },
+      () => {
+        onChange();
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
 }
