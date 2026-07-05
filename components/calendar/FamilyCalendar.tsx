@@ -63,10 +63,13 @@ function groupEventsByDate(events: CalendarEvent[]) {
 }
 
 function getDateKeyFromParts(year: number, monthIndex: number, day: number) {
-  const month = String(monthIndex + 1).padStart(2, "0");
-  const date = String(day).padStart(2, "0");
+  const date = new Date(year, monthIndex, day);
 
-  return `${year}-${month}-${date}`;
+  const actualYear = date.getFullYear();
+  const actualMonth = String(date.getMonth() + 1).padStart(2, "0");
+  const actualDay = String(date.getDate()).padStart(2, "0");
+
+  return `${actualYear}-${actualMonth}-${actualDay}`;
 }
 
 function getCalendarDays(monthDate: Date) {
@@ -76,9 +79,10 @@ function getCalendarDays(monthDate: Date) {
   const firstDayOfMonth = new Date(year, monthIndex, 1);
   const lastDayOfMonth = new Date(year, monthIndex + 1, 0);
 
-  const firstWeekday = firstDayOfMonth.getDay() === 0 ? 7 : firstDayOfMonth.getDay();
-  const leadingEmptyDays = firstWeekday - 1;
+  const firstWeekday =
+    firstDayOfMonth.getDay() === 0 ? 7 : firstDayOfMonth.getDay();
 
+  const leadingEmptyDays = firstWeekday - 1;
   const daysInMonth = lastDayOfMonth.getDate();
 
   const days: {
@@ -91,10 +95,9 @@ function getCalendarDays(monthDate: Date) {
 
   for (let index = leadingEmptyDays; index > 0; index -= 1) {
     const day = previousMonthLastDay - index + 1;
-    const date = getDateKeyFromParts(year, monthIndex - 1, day);
 
     days.push({
-      date,
+      date: getDateKeyFromParts(year, monthIndex - 1, day),
       day,
       isCurrentMonth: false,
     });
@@ -217,7 +220,9 @@ export default function FamilyCalendar({
 
     loadEvents();
     setSelectedDate(editDate);
-    setVisibleMonth(new Date(Number(editDate.slice(0, 4)), Number(editDate.slice(5, 7)) - 1, 1));
+    setVisibleMonth(
+      new Date(Number(editDate.slice(0, 4)), Number(editDate.slice(5, 7)) - 1, 1)
+    );
     closeEditModal();
   }
 
@@ -243,21 +248,29 @@ export default function FamilyCalendar({
   const selectedDateEvents = sortCalendarEvents(eventsByDate[selectedDate] ?? []);
 
   return (
-    <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+    <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-6 shadow-sm ring-1 ring-black/5">
       <div className="mb-5 flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-[#8D846F]">Kalender</p>
+        <div className="flex items-start gap-4">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-lg text-[#4F773D]">
+            ◌
+          </div>
 
-          <h2 className="mt-1 text-2xl font-semibold text-[#24312A]">
-            Familiekalender
-          </h2>
-
-          {!compact && (
-            <p className="mt-2 text-sm leading-6 text-stone-600">
-              Klikk på en dag for å se avtalene. Klikk på en avtale for å
-              redigere.
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
+              Kalender
             </p>
-          )}
+
+            <h2 className="mt-1 text-2xl font-semibold text-[#24312A]">
+              Familiekalender
+            </h2>
+
+            {!compact && (
+              <p className="mt-2 text-sm leading-6 text-stone-600">
+                Klikk på en dag for å se avtalene. Klikk på en avtale for å
+                redigere.
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="rounded-2xl bg-[#F7F4EA] px-4 py-3 text-right">
@@ -268,29 +281,31 @@ export default function FamilyCalendar({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
-        <div className="rounded-3xl bg-[#F7F4EA] p-4">
+      <div className="space-y-5">
+        <div className="rounded-3xl border border-[#ECE3D4] bg-[#F7F4EA] p-4">
           <div className="mb-4 flex items-center justify-between gap-3">
             <button
               onClick={goToPreviousMonth}
-              className="rounded-full bg-white px-3 py-2 text-sm font-medium text-[#24312A] transition hover:brightness-95"
+              className="grid h-9 w-9 place-items-center rounded-full bg-white text-sm font-medium text-[#24312A] shadow-sm transition hover:brightness-95"
+              aria-label="Forrige måned"
+              title="Forrige måned"
             >
               ←
             </button>
 
-            <button
-              onClick={goToToday}
-              className="text-center"
-            >
+            <button onClick={goToToday} className="text-center">
               <p className="text-sm font-semibold capitalize text-[#24312A]">
                 {formatCalendarMonth(visibleMonth)}
               </p>
-              <p className="text-xs text-stone-500">Gå til i dag</p>
+
+              <p className="mt-0.5 text-xs text-stone-500">Gå til i dag</p>
             </button>
 
             <button
               onClick={goToNextMonth}
-              className="rounded-full bg-white px-3 py-2 text-sm font-medium text-[#24312A] transition hover:brightness-95"
+              className="grid h-9 w-9 place-items-center rounded-full bg-white text-sm font-medium text-[#24312A] shadow-sm transition hover:brightness-95"
+              aria-label="Neste måned"
+              title="Neste måned"
             >
               →
             </button>
@@ -300,7 +315,7 @@ export default function FamilyCalendar({
             {weekDays.map((day) => (
               <div
                 key={day}
-                className="py-2 text-center text-xs font-semibold text-[#8D846F]"
+                className="py-2 text-center text-[11px] font-semibold uppercase tracking-wide text-[#8D846F]"
               >
                 {day}
               </div>
@@ -319,7 +334,7 @@ export default function FamilyCalendar({
                   onClick={() => setSelectedDate(day.date)}
                   className={`min-h-12 rounded-2xl p-2 text-left transition hover:bg-white ${
                     isSelected
-                      ? "bg-white ring-2 ring-[#8EB069]"
+                      ? "bg-white shadow-sm ring-2 ring-[#8EB069]"
                       : "bg-transparent"
                   } ${!day.isCurrentMonth ? "opacity-35" : ""}`}
                 >
@@ -335,7 +350,7 @@ export default function FamilyCalendar({
                     </span>
 
                     {dayEvents.length > 0 && (
-                      <span className="rounded-full bg-[#8EB069] px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                      <span className="rounded-full bg-[#4F773D] px-1.5 py-0.5 text-[10px] font-semibold text-white">
                         {dayEvents.length}
                       </span>
                     )}
@@ -359,7 +374,7 @@ export default function FamilyCalendar({
           </div>
         </div>
 
-        <div className="rounded-3xl bg-[#F7F4EA] p-4">
+        <div className="rounded-3xl border border-[#ECE3D4] bg-[#F7F4EA] p-4">
           <div className="mb-3 flex items-center justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
@@ -371,24 +386,28 @@ export default function FamilyCalendar({
               </h3>
             </div>
 
-            <p className="text-xs text-stone-500">
+            <p className="rounded-full bg-white px-3 py-1 text-xs font-medium text-stone-500">
               {selectedDateEvents.length} avtaler
             </p>
           </div>
 
           {selectedDateEvents.length === 0 ? (
-            <div className="rounded-2xl bg-white p-4">
+            <div className="rounded-2xl bg-white px-4 py-3">
               <p className="text-sm text-stone-500">
                 Ingen avtaler denne dagen.
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {selectedDateEvents.map((event) => (
+            <div className="overflow-hidden rounded-2xl bg-white">
+              {selectedDateEvents.map((event, index) => (
                 <button
                   key={event.id}
                   onClick={() => openEditModal(event)}
-                  className="w-full rounded-2xl bg-white p-4 text-left transition hover:brightness-95"
+                  className={`w-full px-4 py-3 text-left transition hover:bg-[#F7F4EA] ${
+                    index !== selectedDateEvents.length - 1
+                      ? "border-b border-[#ECE3D4]"
+                      : ""
+                  }`}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
@@ -420,7 +439,7 @@ export default function FamilyCalendar({
 
         <div>
           <div className="mb-3 flex items-center justify-between gap-4">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-[#8D846F]">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
               Kommende avtaler
             </h3>
 
@@ -430,15 +449,15 @@ export default function FamilyCalendar({
           </div>
 
           {visibleUpcomingEvents.length === 0 ? (
-            <div className="rounded-2xl bg-[#F7F4EA] p-4">
+            <div className="rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA] p-4">
               <p className="text-sm leading-6 text-stone-600">
                 Ingen kommende avtaler. Legg til en avtale via{" "}
                 <strong>+ Ny</strong>.
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {visibleUpcomingEvents.map((event) => (
+            <div className="overflow-hidden rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA]">
+              {visibleUpcomingEvents.map((event, index) => (
                 <button
                   key={event.id}
                   onClick={() => {
@@ -451,7 +470,11 @@ export default function FamilyCalendar({
                       )
                     );
                   }}
-                  className="w-full rounded-2xl bg-[#F7F4EA] p-4 text-left transition hover:brightness-95"
+                  className={`w-full px-4 py-3 text-left transition hover:bg-white ${
+                    index !== visibleUpcomingEvents.length - 1
+                      ? "border-b border-[#ECE3D4]"
+                      : ""
+                  }`}
                 >
                   <div className="flex items-center justify-between gap-4">
                     <div>
@@ -597,7 +620,7 @@ export default function FamilyCalendar({
 
                     <button
                       onClick={saveEditedEvent}
-                      className="rounded-2xl bg-[#F3D66B] px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
+                      className="rounded-2xl bg-[#3F6F35] px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:brightness-110"
                     >
                       Lagre endring
                     </button>

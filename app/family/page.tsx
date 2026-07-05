@@ -1,36 +1,29 @@
-import Link from "next/link";
 import FamilyCalendar from "@/components/calendar/FamilyCalendar";
 import FamilyTasksSummary from "@/components/family/FamilyTasksSummary";
 import ShoppingList from "@/components/shopping/ShoppingList";
 
 export default function FamilyPage() {
   return (
-    <main className="space-y-6">
-      <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-          <div>
-            <p className="text-sm font-medium text-[#8D846F]">Familien</p>
-
-            <h1 className="mt-1 text-3xl font-semibold text-[#24312A]">
-              Familiesenter
-            </h1>
-
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-stone-600">
-              Felles oversikt for praktiske ting hjemme.
-            </p>
-          </div>
-
-          <Link
-            href="/"
-            className="rounded-2xl bg-[#F7F4EA] px-4 py-2 text-sm font-medium text-[#24312A] transition hover:brightness-95"
-          >
-            Til forsiden
-          </Link>
+    <main className="mx-auto w-full max-w-[1720px] space-y-7">
+      <div className="flex items-center gap-4">
+        <div className="grid h-12 w-12 place-items-center rounded-3xl bg-[#EEF5E8] text-2xl text-[#4F773D]">
+          ♧
         </div>
-      </section>
 
-      <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <div>
+          <h1 className="font-serif text-4xl font-semibold tracking-tight text-[#24312A]">
+            Familien
+          </h1>
+
+          <p className="mt-1 text-sm text-stone-500">
+            Praktiske ting, felles avtaler og hverdagsflyt.
+          </p>
+        </div>
+      </div>
+
+      <section className="grid grid-cols-1 gap-7 xl:grid-cols-[1.05fr_0.95fr]">
         <FamilyTasksSummary />
+
         <ShoppingList />
       </section>
 
