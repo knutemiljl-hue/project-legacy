@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Sparkles } from "lucide-react";
 import { dailyTasks } from "@/data/dashboard";
 import {
   ArchivedTask,
@@ -188,17 +189,23 @@ export default function CharacterSummary() {
   }, []);
 
   return (
-    <section className="rounded-3xl border border-stone-200 bg-white/85 p-5 shadow-sm">
+    <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-5 shadow-sm ring-1 ring-black/5">
       <div className="mb-4 flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-medium text-[#8D846F]">XP</p>
+        <div className="flex items-start gap-4">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-[#4F773D]">
+            <Sparkles size={21} strokeWidth={2} />
+          </div>
 
-          <div className="mt-1 flex items-end gap-3">
-            <h2 className="text-2xl font-semibold text-[#24312A]">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
+              Kapittel I
+            </p>
+
+            <h2 className="mt-1 text-2xl font-semibold text-[#24312A]">
               Nivå {level}
             </h2>
 
-            <p className="pb-1 text-sm text-stone-500">{levelTitle}</p>
+            <p className="mt-1 text-sm text-stone-500">{levelTitle}</p>
           </div>
         </div>
 
@@ -212,7 +219,7 @@ export default function CharacterSummary() {
 
       <div>
         <div className="mb-2 flex items-center justify-between text-sm">
-          <p className="font-medium text-[#24312A]">Neste nivå</p>
+          <p className="font-medium text-[#24312A]">Fremdrift</p>
 
           <p className="text-stone-500">
             {currentLevelXp} / {XP_PER_LEVEL} XP
@@ -221,7 +228,7 @@ export default function CharacterSummary() {
 
         <div className="h-3 overflow-hidden rounded-full bg-[#F7F4EA]">
           <div
-            className="h-full rounded-full bg-[#8EB069] transition-all"
+            className="h-full rounded-full bg-[#4F773D] transition-all"
             style={{ width: `${progressPercentage}%` }}
           />
         </div>
@@ -249,8 +256,8 @@ export default function CharacterSummary() {
 
       <div className="mt-4 rounded-3xl bg-[#F7F4EA] p-4">
         <div className="mb-3 flex items-center justify-between gap-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-[#8D846F]">
-            Siste XP
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
+            Siste fullførte
           </h3>
 
           <p className="text-xs text-stone-400">
@@ -280,7 +287,7 @@ export default function CharacterSummary() {
                   </p>
                 </div>
 
-                <p className="rounded-full bg-[#F4F8EF] px-3 py-1 text-xs font-semibold text-[#6F8F54]">
+                <p className="rounded-full bg-[#F4F8EF] px-3 py-1 text-xs font-semibold text-[#4F773D]">
                   +{task.xp} XP
                 </p>
               </div>

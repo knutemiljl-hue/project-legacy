@@ -11,7 +11,7 @@ import {
   Sprout,
   Users,
 } from "lucide-react";
-import { readActiveUser } from "@/lib/users";
+import { legacyUsers, readActiveUser } from "@/lib/users";
 
 const navigationItems = [
   {
@@ -38,7 +38,7 @@ const navigationItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const [activeUser, setActiveUser] = useState(readActiveUser());
+  const [activeUser, setActiveUser] = useState(legacyUsers[0]);
 
   useEffect(() => {
     function updateActiveUser() {

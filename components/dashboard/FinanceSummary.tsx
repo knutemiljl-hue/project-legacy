@@ -1,11 +1,12 @@
+import { WalletCards } from "lucide-react";
 import { financeItems } from "@/data/dashboard";
 
 export default function FinanceSummary() {
   return (
     <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-6 shadow-sm ring-1 ring-black/5">
       <div className="mb-5 flex items-start gap-4">
-        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-lg text-[#4F773D]">
-          ◇
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-[#4F773D]">
+          <WalletCards size={21} strokeWidth={2} />
         </div>
 
         <div>

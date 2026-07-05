@@ -2,6 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import {
+  Archive,
+  Check,
+  CheckCircle2,
+  Circle,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import { dailyTasks } from "@/data/dashboard";
 import {
   ArchivedTask,
@@ -88,7 +96,9 @@ function TaskList({
                   onClick={() => onToggleTask(task.id)}
                   className="flex flex-1 items-center gap-3 text-left"
                 >
-                  <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white" />
+                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white text-stone-300">
+                    <Circle size={13} strokeWidth={2} />
+                  </span>
 
                   <div>
                     <p className="font-medium text-[#24312A]">{task.title}</p>
@@ -111,11 +121,11 @@ function TaskList({
                   {task.isCustom && (
                     <button
                       onClick={() => onDeleteTask(task.id)}
-                      className="rounded-full px-3 py-1 text-sm font-medium text-stone-400 transition hover:bg-white hover:text-red-600"
+                      className="grid h-8 w-8 place-items-center rounded-full text-stone-400 transition hover:bg-white hover:text-red-600"
                       aria-label={`Slett ${task.title}`}
                       title="Slett oppgave"
                     >
-                      ×
+                      <Trash2 size={15} strokeWidth={2} />
                     </button>
                   )}
                 </div>
@@ -185,8 +195,8 @@ function CompletedTasks({
               >
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="grid h-5 w-5 place-items-center rounded-full bg-[#8EB069] text-xs text-white">
-                      ✓
+                    <span className="grid h-5 w-5 place-items-center rounded-full bg-[#8EB069] text-white">
+                      <Check size={13} strokeWidth={2.5} />
                     </span>
 
                     <p className="font-medium text-[#24312A]">{task.title}</p>
@@ -206,8 +216,9 @@ function CompletedTasks({
 
                 <button
                   onClick={() => onUndoTask(task.id)}
-                  className="rounded-full bg-[#F7F4EA] px-3 py-1 text-xs font-medium text-[#24312A] transition hover:brightness-95"
+                  className="flex items-center gap-1 rounded-full bg-[#F7F4EA] px-3 py-1 text-xs font-medium text-[#24312A] transition hover:brightness-95"
                 >
+                  <RotateCcw size={12} strokeWidth={2} />
                   Angre
                 </button>
               </div>
@@ -227,16 +238,22 @@ function TaskHistorySummary({ history }: { history: ArchivedTask[] }) {
       href="/archive"
       className="flex items-center justify-between gap-4 rounded-3xl border border-[#ECE3D4] bg-[#F7F4EA] px-5 py-4 transition hover:brightness-95"
     >
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
-          Arkiv
-        </p>
+      <div className="flex items-start gap-3">
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-white text-[#4F773D]">
+          <Archive size={18} strokeWidth={2} />
+        </div>
 
-        <p className="mt-1 text-sm text-stone-600">
-          {history.length === 0
-            ? "Ingen arkiverte oppgaver ennå"
-            : `${history.length} arkiverte oppgaver`}
-        </p>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
+            Arkiv
+          </p>
+
+          <p className="mt-1 text-sm text-stone-600">
+            {history.length === 0
+              ? "Ingen arkiverte oppgaver ennå"
+              : `${history.length} arkiverte oppgaver`}
+          </p>
+        </div>
       </div>
 
       <div className="flex items-center gap-3">
@@ -432,8 +449,8 @@ export default function DailyTasks() {
     <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-6 shadow-sm ring-1 ring-black/5">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-lg text-[#4F773D]">
-            ✓
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-[#4F773D]">
+            <CheckCircle2 size={21} strokeWidth={2} />
           </div>
 
           <div>

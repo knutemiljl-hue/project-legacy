@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Check, Circle, ShoppingBasket, Trash2 } from "lucide-react";
 import {
   ShoppingItem,
   readShoppingItems,
@@ -66,8 +67,8 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
     <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-6 shadow-sm ring-1 ring-black/5">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-lg text-[#4F773D]">
-            ♧
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-[#4F773D]">
+            <ShoppingBasket size={21} strokeWidth={2} />
           </div>
 
           <div>
@@ -135,7 +136,9 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
                       onClick={() => toggleItem(item.id)}
                       className="flex flex-1 items-center gap-3 text-left"
                     >
-                      <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white" />
+                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white text-stone-300">
+                        <Circle size={13} strokeWidth={2} />
+                      </span>
 
                       <div>
                         <p className="font-medium text-[#24312A]">
@@ -148,11 +151,11 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
 
                     <button
                       onClick={() => deleteItem(item.id)}
-                      className="rounded-full px-3 py-1 text-sm font-medium text-stone-400 transition hover:bg-white hover:text-red-600"
+                      className="grid h-8 w-8 place-items-center rounded-full text-stone-400 transition hover:bg-white hover:text-red-600"
                       aria-label={`Slett ${item.title}`}
                       title="Slett vare"
                     >
-                      ×
+                      <Trash2 size={15} strokeWidth={2} />
                     </button>
                   </div>
                 ))}
@@ -182,8 +185,8 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
                       onClick={() => toggleItem(item.id)}
                       className="flex flex-1 items-center gap-3 text-left"
                     >
-                      <span className="grid h-5 w-5 place-items-center rounded-full bg-[#8EB069] text-xs text-white">
-                        ✓
+                      <span className="grid h-5 w-5 place-items-center rounded-full bg-[#8EB069] text-white">
+                        <Check size={13} strokeWidth={2.5} />
                       </span>
 
                       <div>
@@ -197,11 +200,11 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
 
                     <button
                       onClick={() => deleteItem(item.id)}
-                      className="rounded-full px-3 py-1 text-sm font-medium text-stone-400 transition hover:bg-white hover:text-red-600"
+                      className="grid h-8 w-8 place-items-center rounded-full text-stone-400 transition hover:bg-white hover:text-red-600"
                       aria-label={`Slett ${item.title}`}
                       title="Slett vare"
                     >
-                      ×
+                      <Trash2 size={15} strokeWidth={2} />
                     </button>
                   </div>
                 ))}
