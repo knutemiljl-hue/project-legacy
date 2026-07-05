@@ -3,33 +3,7 @@ import ProfileCard from "@/components/me/ProfileCard";
 import SkillCard from "@/components/me/SkillCard";
 import CurrentChallenge from "@/components/me/CurrentChallenge";
 import NextMilestone from "@/components/me/NextMilestone";
-
-const skills = [
-  {
-    title: "Familie",
-    level: "Nivå 1",
-    description:
-      "Tilstedeværelse, omsorg og praktisk støtte hjemme.",
-  },
-  {
-    title: "Helse",
-    level: "Nivå 1",
-    description:
-      "Trening, søvn, energi og kroppen du ønsker å ha over tid.",
-  },
-  {
-    title: "Karriere",
-    level: "Nivå 1",
-    description:
-      "Partner-track, klientarbeid, faglig utvikling og synlighet.",
-  },
-  {
-    title: "Økonomi",
-    level: "Nivå 1",
-    description:
-      "Trygghet, sparing, investeringer og langsiktig handlingsrom.",
-  },
-];
+import { skills } from "@/data/me";
 
 export default function MePage() {
   return (
