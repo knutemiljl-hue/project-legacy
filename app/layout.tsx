@@ -1,10 +1,50 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import AppShell from "@/components/layout/AppShell";
+import { PwaRegistration } from "@/components/layout/PwaRegistration";
 
 export const metadata: Metadata = {
-  title: "Project Legacy",
+  title: {
+    default: "Project Legacy",
+    template: "%s | Project Legacy",
+  },
   description: "Et rolig familiesystem for hverdagen.",
+  applicationName: "Project Legacy",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Project Legacy",
+    statusBarStyle: "default",
+  },
+  icons: {
+    icon: [
+      {
+        url: "/icons/icon-192.png",
+        sizes: "192x192",
+        type: "image/png",
+      },
+      {
+        url: "/icons/icon-512.png",
+        sizes: "512x512",
+        type: "image/png",
+      },
+    ],
+    apple: [
+      {
+        url: "/icons/apple-touch-icon.png",
+        sizes: "180x180",
+        type: "image/png",
+      },
+    ],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#F7F4EA",
+  colorScheme: "light",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -15,6 +55,7 @@ export default function RootLayout({
   return (
     <html lang="nb">
       <body>
+        <PwaRegistration />
         <AppShell>{children}</AppShell>
       </body>
     </html>
