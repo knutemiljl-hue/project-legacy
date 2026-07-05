@@ -2,22 +2,17 @@ export const statusCards = [
   {
     title: "Familie",
     value: "Rolig",
-    subtitle: "2 felles oppgaver",
+    subtitle: "Praktiske ting under kontroll.",
   },
   {
     title: "Helse",
     value: "Stabil",
-    subtitle: "1 oppdrag i dag",
-  },
-  {
-    title: "Karriere",
-    value: "Fokus",
-    subtitle: "Deep work planlagt",
+    subtitle: "Små valg som bygger overskudd.",
   },
   {
     title: "Økonomi",
     value: "Oversikt",
-    subtitle: "Sist oppdatert i dag",
+    subtitle: "Felles retning og trygghet.",
   },
 ];
 
@@ -37,9 +32,9 @@ export const dailyTasks = [
     done: false,
   },
   {
-    id: "client-meeting-prep",
-    title: "Forbered klientmøte",
-    subtitle: "BAHR",
+    id: "home-practical",
+    title: "Ta én praktisk ting hjemme",
+    subtitle: "Rydd, vask, handle eller ordne noe lite",
     time: "20:30",
     done: false,
   },
@@ -48,16 +43,19 @@ export const dailyTasks = [
 export const upcomingEvents = [
   {
     title: "Helsestasjon",
+    subtitle: "Familie",
     date: "Tirsdag 9. juli",
     time: "09:30",
   },
   {
-    title: "Klientmøte – BAHR",
+    title: "Familietid",
+    subtitle: "Hjemme",
     date: "Tirsdag 9. juli",
-    time: "13:00",
+    time: "17:00",
   },
   {
     title: "Date night med Ingrid",
+    subtitle: "Kveld",
     date: "Fredag 12. juli",
     time: "19:00",
   },

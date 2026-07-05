@@ -1,6 +1,5 @@
 import PastReflections from "@/components/journal/PastReflections";
 import ReflectionCard from "@/components/journal/ReflectionCard";
-import { pastReflections } from "@/data/journal";
 
 export default function JournalPage() {
   return (
@@ -19,7 +18,7 @@ export default function JournalPage() {
 
       <ReflectionCard />
 
-      <PastReflections reflections={pastReflections} />
+      <PastReflections />
     </main>
   );
 }

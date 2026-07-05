@@ -9,9 +9,7 @@ export default function Home() {
   return (
     <main className="space-y-6">
       <div>
-        <p className="text-sm font-medium text-[#8D846F]">Oversikt</p>
-
-        <h1 className="mt-1 text-3xl font-semibold text-[#24312A]">
+        <h1 className="text-3xl font-semibold text-[#24312A]">
           God kveld, Knut.
         </h1>
 
@@ -20,7 +18,7 @@ export default function Home() {
         </p>
       </div>
 
-      <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {statusCards.map((card) => (
           <StatusCard
             key={card.title}

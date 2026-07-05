@@ -2,7 +2,7 @@ import CurrentChallenge from "@/components/me/CurrentChallenge";
 import NextMilestone from "@/components/me/NextMilestone";
 import ProfileCard from "@/components/me/ProfileCard";
 import SkillCard from "@/components/me/SkillCard";
-import { currentChallenge, nextMilestone, profile, skills } from "@/data/me";
+import { skills } from "@/data/me";
 
 export default function MePage() {
   return (
@@ -19,7 +19,7 @@ export default function MePage() {
         </p>
       </div>
 
-      <ProfileCard profile={profile} />
+      <ProfileCard />
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {skills.map((skill) => (
@@ -33,9 +33,9 @@ export default function MePage() {
       </section>
 
       <section className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <CurrentChallenge challenge={currentChallenge} />
+        <CurrentChallenge />
 
-        <NextMilestone milestone={nextMilestone} />
+        <NextMilestone />
       </section>
     </main>
   );

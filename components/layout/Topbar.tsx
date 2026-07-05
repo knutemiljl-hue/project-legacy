@@ -1,17 +1,30 @@
+"use client";
+
+import { usePathname } from "next/navigation";
 import QuickAddMenu from "./QuickAddMenu";
 
+const pageTitles: Record<string, string> = {
+  "/": "Oversikt",
+  "/family": "Familien",
+  "/me": "Meg",
+  "/journal": "Journal",
+  "/settings": "Innstillinger",
+  "/archive": "Arkiv",
+};
+
 export default function Topbar() {
+  const pathname = usePathname();
+
+  const pageTitle = pageTitles[pathname] ?? "Project Legacy";
+
   return (
-    <header className="flex items-center justify-between border-b border-stone-200 bg-[#F7F4EA]/80 px-6 py-4 backdrop-blur">
+    <header className="flex items-center justify-between border-b border-stone-200 bg-[#F7F4EA] px-6 py-4">
       <div>
-        <p className="text-sm text-[#8D846F]">Oversikt</p>
-        <h2 className="text-xl font-semibold text-[#24312A]">
-          God kveld, Knut 👋
-        </h2>
+        <p className="text-sm font-medium text-[#8D846F]">{pageTitle}</p>
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="hidden rounded-full border border-stone-200 bg-white px-4 py-2 text-sm md:block">
+        <div className="rounded-2xl border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-[#24312A]">
           Familien Lie
         </div>
 
