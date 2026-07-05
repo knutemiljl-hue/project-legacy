@@ -6,6 +6,7 @@ export type LegacyUser = {
   id: LegacyUserId;
   name: string;
   initials: string;
+  avatar: string;
 };
 
 export const legacyUsers: LegacyUser[] = [
@@ -13,11 +14,13 @@ export const legacyUsers: LegacyUser[] = [
     id: "knut",
     name: "Knut Emil",
     initials: "KE",
+    avatar: "/avatars/knut.png",
   },
   {
     id: "ingrid",
     name: "Ingrid",
     initials: "I",
+    avatar: "/avatars/ingrid.png",
   },
 ];
 
@@ -31,6 +34,10 @@ export function getUserById(userId?: string | null) {
 
 export function getUserDisplayName(userId?: string | null) {
   return getUserById(userId)?.name ?? "Ukjent";
+}
+
+export function getUserAvatar(userId?: string | null) {
+  return getUserById(userId)?.avatar ?? "/avatars/knut.png";
 }
 
 export function readActiveUserId(): LegacyUserId {
@@ -49,7 +56,6 @@ export function readActiveUserId(): LegacyUserId {
 
 export function readActiveUser() {
   const activeUserId = readActiveUserId();
-
   return getUserById(activeUserId) ?? legacyUsers[0];
 }
 

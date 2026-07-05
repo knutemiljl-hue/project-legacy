@@ -1,7 +1,7 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
-import { Leaf } from "lucide-react";
 import { legacyUsers, readActiveUser } from "@/lib/users";
 
 export default function UserGreeting() {
@@ -30,14 +30,25 @@ export default function UserGreeting() {
   }, []);
 
   return (
-    <div className="flex items-center gap-4">
-      <div className="grid h-12 w-12 place-items-center rounded-3xl bg-[#EEF5E8] text-[#4F773D]">
-        <Leaf size={25} strokeWidth={2} />
+    <div className="flex items-center gap-5">
+      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-[2rem] border border-[#E2D8C7] bg-white shadow-sm ring-1 ring-black/5">
+        <Image
+          src={activeUser.avatar}
+          alt={`Avatar for ${activeUser.name}`}
+          fill
+          priority
+          sizes="80px"
+          className="object-cover"
+        />
       </div>
 
-      <h1 className="font-serif text-4xl font-semibold tracking-tight text-[#24312A]">
-        God kveld, {activeUser.name}.
-      </h1>
+      <div>
+        <p className="text-sm font-medium text-[#8D846F]">Oversikt</p>
+
+        <h1 className="font-serif text-4xl font-semibold tracking-tight text-[#24312A]">
+          Hei, {activeUser.name}.
+        </h1>
+      </div>
     </div>
   );
 }
