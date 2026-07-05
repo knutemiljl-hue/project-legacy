@@ -12,14 +12,22 @@ import {
 import {
   CalendarEventType,
   CalendarOwner,
-  addCalendarEvent,
+  CalendarRecurrenceFrequency,
+  addRecurringCalendarEvents,
   getCalendarOwnerBadgeClass,
   getCalendarOwnerDotClass,
   getCalendarOwnerLabel,
+  getCalendarRecurrenceLabel,
   getLocalDateKey as getCalendarDateKey,
 } from "@/lib/calendar";
 import { addShoppingItems } from "@/lib/shopping";
-import { TaskCategory, addTask, getLocalDateKey } from "@/lib/tasks";
+import {
+  RecurrenceFrequency,
+  TaskCategory,
+  addRecurringTasks,
+  getLocalDateKey,
+  getRecurrenceLabel,
+} from "@/lib/tasks";
 
 const actions = [
   {
@@ -62,6 +70,20 @@ const calendarTypes: {
 
 const calendarOwners: CalendarOwner[] = ["knut", "ingrid", "family"];
 
+const taskRecurrenceOptions: RecurrenceFrequency[] = [
+  "none",
+  "weekly",
+  "biweekly",
+  "monthly",
+];
+
+const calendarRecurrenceOptions: CalendarRecurrenceFrequency[] = [
+  "none",
+  "weekly",
+  "biweekly",
+  "monthly",
+];
+
 export default function QuickAddMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -73,6 +95,9 @@ export default function QuickAddMenu() {
   const [taskTime, setTaskTime] = useState("");
   const [taskScope, setTaskScope] = useState<"personal" | "family">("personal");
   const [taskCategory, setTaskCategory] = useState<TaskCategory>("task");
+  const [taskRecurrenceFrequency, setTaskRecurrenceFrequency] =
+    useState<RecurrenceFrequency>("none");
+  const [taskRecurrenceUntil, setTaskRecurrenceUntil] = useState("");
 
   const [shoppingInput, setShoppingInput] = useState("");
 
@@ -84,6 +109,9 @@ export default function QuickAddMenu() {
     useState<CalendarEventType>("family");
   const [calendarOwner, setCalendarOwner] =
     useState<CalendarOwner>("family");
+  const [calendarRecurrenceFrequency, setCalendarRecurrenceFrequency] =
+    useState<CalendarRecurrenceFrequency>("none");
+  const [calendarRecurrenceUntil, setCalendarRecurrenceUntil] = useState("");
 
   useEffect(() => {
     setIsMounted(true);
@@ -111,6 +139,8 @@ export default function QuickAddMenu() {
     setTaskTime("");
     setTaskScope("personal");
     setTaskCategory("task");
+    setTaskRecurrenceFrequency("none");
+    setTaskRecurrenceUntil("");
 
     setShoppingInput("");
 
@@ -120,6 +150,8 @@ export default function QuickAddMenu() {
     setCalendarLocation("");
     setCalendarType("family");
     setCalendarOwner("family");
+    setCalendarRecurrenceFrequency("none");
+    setCalendarRecurrenceUntil("");
   }
 
   async function saveTask() {
@@ -127,13 +159,15 @@ export default function QuickAddMenu() {
       return;
     }
 
-    await addTask({
+    await addRecurringTasks({
       title: taskTitle,
       subtitle: taskSubtitle,
       date: taskDate,
       time: taskTime,
       scope: taskScope,
       category: taskCategory,
+      recurrenceFrequency: taskRecurrenceFrequency,
+      recurrenceUntil: taskRecurrenceUntil,
     });
 
     closeModal();
@@ -153,13 +187,15 @@ export default function QuickAddMenu() {
       return;
     }
 
-    await addCalendarEvent({
+    await addRecurringCalendarEvents({
       title: calendarTitle,
       date: calendarDate,
       time: calendarTime,
       location: calendarLocation,
       type: calendarType,
       calendarOwner,
+      recurrenceFrequency: calendarRecurrenceFrequency,
+      recurrenceUntil: calendarRecurrenceUntil,
     });
 
     closeModal();
@@ -339,7 +375,7 @@ export default function QuickAddMenu() {
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <label className="block">
                         <span className="text-sm font-medium text-[#24312A]">
-                          Dato
+                          Første dato
                         </span>
 
                         <input
@@ -363,6 +399,54 @@ export default function QuickAddMenu() {
                         />
                       </label>
                     </div>
+
+                    <div>
+                      <span className="text-sm font-medium text-[#24312A]">
+                        Gjentas
+                      </span>
+
+                      <div className="mt-2 grid grid-cols-2 gap-3">
+                        {taskRecurrenceOptions.map((frequency) => (
+                          <button
+                            type="button"
+                            key={frequency}
+                            onPointerUp={() =>
+                              setTaskRecurrenceFrequency(frequency)
+                            }
+                            className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
+                              taskRecurrenceFrequency === frequency
+                                ? "border-[#8EB069] bg-[#EEF5E8] text-[#24312A]"
+                                : "border-stone-200 bg-[#F7F4EA] text-stone-500 hover:brightness-95"
+                            }`}
+                          >
+                            {getRecurrenceLabel(frequency)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {taskRecurrenceFrequency !== "none" && (
+                      <label className="block">
+                        <span className="text-sm font-medium text-[#24312A]">
+                          Frem til
+                        </span>
+
+                        <input
+                          type="date"
+                          value={taskRecurrenceUntil}
+                          onChange={(event) =>
+                            setTaskRecurrenceUntil(event.target.value)
+                          }
+                          min={taskDate}
+                          className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition focus:border-[#8D846F] sm:text-sm"
+                        />
+
+                        <p className="mt-2 text-xs leading-5 text-stone-500">
+                          Lager maks 52 forekomster. Hvis dato ikke velges,
+                          lagres bare én vanlig oppgave.
+                        </p>
+                      </label>
+                    )}
 
                     <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-between">
                       <button
@@ -445,7 +529,7 @@ export default function QuickAddMenu() {
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <label className="block">
                         <span className="text-sm font-medium text-[#24312A]">
-                          Dato
+                          Første dato
                         </span>
 
                         <input
@@ -537,6 +621,54 @@ export default function QuickAddMenu() {
                         ))}
                       </div>
                     </div>
+
+                    <div>
+                      <span className="text-sm font-medium text-[#24312A]">
+                        Gjentas
+                      </span>
+
+                      <div className="mt-2 grid grid-cols-2 gap-3">
+                        {calendarRecurrenceOptions.map((frequency) => (
+                          <button
+                            type="button"
+                            key={frequency}
+                            onPointerUp={() =>
+                              setCalendarRecurrenceFrequency(frequency)
+                            }
+                            className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
+                              calendarRecurrenceFrequency === frequency
+                                ? "border-[#8EB069] bg-[#EEF5E8] text-[#24312A]"
+                                : "border-stone-200 bg-[#F7F4EA] text-stone-500 hover:brightness-95"
+                            }`}
+                          >
+                            {getCalendarRecurrenceLabel(frequency)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {calendarRecurrenceFrequency !== "none" && (
+                      <label className="block">
+                        <span className="text-sm font-medium text-[#24312A]">
+                          Frem til
+                        </span>
+
+                        <input
+                          type="date"
+                          value={calendarRecurrenceUntil}
+                          onChange={(event) =>
+                            setCalendarRecurrenceUntil(event.target.value)
+                          }
+                          min={calendarDate}
+                          className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition focus:border-[#8D846F] sm:text-sm"
+                        />
+
+                        <p className="mt-2 text-xs leading-5 text-stone-500">
+                          Lager maks 52 forekomster. Hvis dato ikke velges,
+                          lagres bare én vanlig avtale.
+                        </p>
+                      </label>
+                    )}
 
                     <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-between">
                       <button

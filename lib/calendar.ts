@@ -1,6 +1,8 @@
 import { supabase } from "@/lib/supabase";
 import { LegacyUserId, readActiveUser } from "@/lib/users";
 
+export const MAX_CALENDAR_RECURRENCE_ITEMS = 52;
+
 export type CalendarEventType =
   | "family"
   | "health"
@@ -10,6 +12,11 @@ export type CalendarEventType =
   | "other";
 
 export type CalendarOwner = "knut" | "ingrid" | "family";
+export type CalendarRecurrenceFrequency =
+  | "none"
+  | "weekly"
+  | "biweekly"
+  | "monthly";
 
 export type CalendarEvent = {
   id: string;
@@ -30,6 +37,11 @@ export type CalendarEventInput = {
   location?: string;
   type: CalendarEventType;
   calendarOwner?: CalendarOwner;
+};
+
+export type RecurringCalendarEventInput = CalendarEventInput & {
+  recurrenceFrequency?: CalendarRecurrenceFrequency;
+  recurrenceUntil?: string;
 };
 
 type CalendarEventRow = {
@@ -135,6 +147,83 @@ export function getCalendarOwnerBadgeClass(owner: CalendarOwner) {
   return classes[owner];
 }
 
+export function getCalendarRecurrenceLabel(
+  frequency: CalendarRecurrenceFrequency
+) {
+  const labels: Record<CalendarRecurrenceFrequency, string> = {
+    none: "Gjentas ikke",
+    weekly: "Ukentlig",
+    biweekly: "Annenhver uke",
+    monthly: "Månedlig",
+  };
+
+  return labels[frequency];
+}
+
+function parseDateKey(dateKey: string) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+
+  return new Date(year, month - 1, day);
+}
+
+function getLastDayOfMonth(year: number, monthIndex: number) {
+  return new Date(year, monthIndex + 1, 0).getDate();
+}
+
+function addMonthsClamped(date: Date, monthsToAdd: number, preferredDay: number) {
+  const year = date.getFullYear();
+  const monthIndex = date.getMonth() + monthsToAdd;
+  const target = new Date(year, monthIndex, 1);
+  const lastDay = getLastDayOfMonth(target.getFullYear(), target.getMonth());
+
+  target.setDate(Math.min(preferredDay, lastDay));
+
+  return target;
+}
+
+export function buildRecurringCalendarDateKeys({
+  startDate,
+  untilDate,
+  frequency,
+}: {
+  startDate?: string;
+  untilDate?: string;
+  frequency: CalendarRecurrenceFrequency;
+}) {
+  if (frequency === "none" || !startDate || !untilDate) {
+    return startDate ? [startDate] : [];
+  }
+
+  const start = parseDateKey(startDate);
+  const until = parseDateKey(untilDate);
+
+  if (start > until) {
+    return [startDate];
+  }
+
+  const dates: string[] = [];
+  let current = new Date(start);
+  const preferredMonthDay = start.getDate();
+
+  while (current <= until && dates.length < MAX_CALENDAR_RECURRENCE_ITEMS) {
+    dates.push(getLocalDateKey(current));
+
+    if (frequency === "weekly") {
+      current.setDate(current.getDate() + 7);
+    }
+
+    if (frequency === "biweekly") {
+      current.setDate(current.getDate() + 14);
+    }
+
+    if (frequency === "monthly") {
+      current = addMonthsClamped(current, 1, preferredMonthDay);
+    }
+  }
+
+  return dates;
+}
+
 export function sortCalendarEvents(events: CalendarEvent[]) {
   return [...events].sort((a, b) => {
     if (a.date !== b.date) {
@@ -185,6 +274,55 @@ export async function addCalendarEvent(event: CalendarEventInput) {
 
   if (error) {
     console.error("Kunne ikke legge til kalenderavtale:", error);
+    return;
+  }
+
+  notifyCalendarUpdated();
+}
+
+export async function addRecurringCalendarEvents(
+  event: RecurringCalendarEventInput
+) {
+  const trimmedTitle = event.title.trim();
+
+  if (!trimmedTitle || !event.date) {
+    return;
+  }
+
+  const frequency = event.recurrenceFrequency ?? "none";
+
+  if (frequency === "none" || !event.recurrenceUntil) {
+    await addCalendarEvent(event);
+    return;
+  }
+
+  const activeUser = readActiveUser();
+
+  const dates = buildRecurringCalendarDateKeys({
+    startDate: event.date,
+    untilDate: event.recurrenceUntil,
+    frequency,
+  });
+
+  if (dates.length === 0) {
+    await addCalendarEvent(event);
+    return;
+  }
+
+  const { error } = await supabase.from("legacy_calendar_events").insert(
+    dates.map((date) => ({
+      title: trimmedTitle,
+      event_date: date,
+      event_time: event.time || "Hele dagen",
+      location: event.location?.trim() || null,
+      type: event.type,
+      calendar_owner: event.calendarOwner ?? "family",
+      created_by: activeUser.id,
+    }))
+  );
+
+  if (error) {
+    console.error("Kunne ikke legge til gjentakende kalenderavtaler:", error);
     return;
   }
 
