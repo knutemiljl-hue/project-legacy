@@ -44,6 +44,10 @@ function TaskList({
   onToggleTask: (taskId: string) => void;
   onDeleteTask: (taskId: string) => void;
 }) {
+  const visibleTasks = tasks.filter(
+    (task) => !completedTasks.includes(task.id)
+  );
+
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
@@ -51,17 +55,18 @@ function TaskList({
           {title}
         </h3>
 
-        <p className="text-xs text-stone-400">{tasks.length} oppgaver</p>
+        <p className="text-xs text-stone-400">
+          {visibleTasks.length} åpne oppgaver
+        </p>
       </div>
 
-      {tasks.length === 0 ? (
+      {visibleTasks.length === 0 ? (
         <div className="rounded-2xl bg-[#F7F4EA] p-4">
-          <p className="text-sm text-stone-500">Ingen oppgaver her ennå.</p>
+          <p className="text-sm text-stone-500">Ingen åpne oppgaver her.</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {tasks.map((task) => {
-            const isCompleted = completedTasks.includes(task.id);
+          {visibleTasks.map((task) => {
             const formattedDate = formatDate(task.date);
 
             return (
@@ -73,15 +78,7 @@ function TaskList({
                   onClick={() => onToggleTask(task.id)}
                   className="flex flex-1 items-center gap-3 text-left"
                 >
-                  <div
-                    className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border ${
-                      isCompleted
-                        ? "border-[#8EB069] bg-[#8EB069] text-white"
-                        : "border-stone-300"
-                    }`}
-                  >
-                    {isCompleted ? "✓" : ""}
-                  </div>
+                  <div className="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300" />
 
                   <div>
                     <p className="font-medium text-[#24312A]">{task.title}</p>
@@ -136,6 +133,10 @@ export default function DailyTasks() {
 
   const personalTasks = allTasks.filter((task) => task.scope === "personal");
   const familyTasks = allTasks.filter((task) => task.scope === "family");
+
+  const openTasks = allTasks.filter(
+    (task) => !completedTasks.includes(task.id)
+  );
 
   useEffect(() => {
     const storedCompletedTasks =
@@ -231,12 +232,12 @@ export default function DailyTasks() {
           </p>
 
           <h2 className="mt-1 text-2xl font-semibold text-[#24312A]">
-            {allTasks.length} oppdrag
+            {openTasks.length} åpne oppdrag
           </h2>
         </div>
 
         <p className="text-sm text-stone-500">
-          {completedTasks.length} / {allTasks.length} fullført
+          {completedTasks.length} fullført i dag
         </p>
       </div>
 
