@@ -12,6 +12,8 @@ import {
 
 const pageTitles: Record<string, string> = {
   "/": "Oversikt",
+  "/tasks": "Gjøremål",
+  "/calendar": "Kalender",
   "/family": "Familien",
   "/journal": "Journal",
   "/settings": "Innstillinger",

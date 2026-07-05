@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   BookOpen,
+  CalendarDays,
+  CheckCircle2,
   Home,
   Leaf,
   Settings,
@@ -14,26 +16,12 @@ import {
 import { legacyUsers, readActiveUser } from "@/lib/users";
 
 const navigationItems = [
-  {
-    label: "Oversikt",
-    href: "/",
-    icon: Home,
-  },
-  {
-    label: "Familien",
-    href: "/family",
-    icon: Users,
-  },
-  {
-    label: "Journal",
-    href: "/journal",
-    icon: BookOpen,
-  },
-  {
-    label: "Innstillinger",
-    href: "/settings",
-    icon: Settings,
-  },
+  { label: "Oversikt", href: "/", icon: Home },
+  { label: "Gjøremål", href: "/tasks", icon: CheckCircle2 },
+  { label: "Kalender", href: "/calendar", icon: CalendarDays },
+  { label: "Familien", href: "/family", icon: Users },
+  { label: "Journal", href: "/journal", icon: BookOpen },
+  { label: "Innstillinger", href: "/settings", icon: Settings },
 ];
 
 export default function Sidebar() {
@@ -71,7 +59,6 @@ export default function Sidebar() {
 
         <div>
           <p className="text-xs font-medium text-[#8D846F]">Project</p>
-
           <h1 className="font-serif text-2xl font-semibold leading-none text-[#24312A]">
             Legacy
           </h1>
@@ -106,7 +93,6 @@ export default function Sidebar() {
               >
                 <Icon size={17} strokeWidth={2} />
               </span>
-
               {item.label}
             </Link>
           );
@@ -128,7 +114,6 @@ export default function Sidebar() {
             strokeWidth={2}
             className="mt-1 shrink-0 text-[#4F773D]"
           />
-
           <p>Aktiv bruker i Project Legacy.</p>
         </div>
       </div>
