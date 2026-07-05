@@ -18,6 +18,14 @@ export type CalendarEvent = {
   createdAt: string;
 };
 
+export type CalendarEventInput = {
+  title: string;
+  date: string;
+  time?: string;
+  location?: string;
+  type: CalendarEventType;
+};
+
 function canUseStorage() {
   return typeof window !== "undefined";
 }
@@ -66,6 +74,13 @@ export function getLocalDateKey(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+export function getMonthKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+
+  return `${year}-${month}`;
+}
+
 export function formatCalendarDate(date: string) {
   const [year, month, day] = date.split("-").map(Number);
   const localDate = new Date(year, month - 1, day);
@@ -75,6 +90,13 @@ export function formatCalendarDate(date: string) {
     day: "numeric",
     month: "long",
   }).format(localDate);
+}
+
+export function formatCalendarMonth(date: Date) {
+  return new Intl.DateTimeFormat("nb-NO", {
+    month: "long",
+    year: "numeric",
+  }).format(date);
 }
 
 export function getEventTypeLabel(type: CalendarEventType) {
@@ -108,13 +130,7 @@ export function sortCalendarEvents(events: CalendarEvent[]) {
   });
 }
 
-export function addCalendarEvent(event: {
-  title: string;
-  date: string;
-  time?: string;
-  location?: string;
-  type: CalendarEventType;
-}) {
+export function addCalendarEvent(event: CalendarEventInput) {
   const trimmedTitle = event.title.trim();
 
   if (!trimmedTitle || !event.date) {
@@ -134,6 +150,33 @@ export function addCalendarEvent(event: {
   };
 
   saveCalendarEvents(sortCalendarEvents([...existingEvents, newEvent]));
+}
+
+export function updateCalendarEvent(eventId: string, updatedEvent: CalendarEventInput) {
+  const trimmedTitle = updatedEvent.title.trim();
+
+  if (!trimmedTitle || !updatedEvent.date) {
+    return;
+  }
+
+  const existingEvents = readCalendarEvents();
+
+  const nextEvents = existingEvents.map((event) => {
+    if (event.id !== eventId) {
+      return event;
+    }
+
+    return {
+      ...event,
+      title: trimmedTitle,
+      date: updatedEvent.date,
+      time: updatedEvent.time || "Hele dagen",
+      location: updatedEvent.location?.trim() || undefined,
+      type: updatedEvent.type,
+    };
+  });
+
+  saveCalendarEvents(sortCalendarEvents(nextEvents));
 }
 
 export function deleteCalendarEvent(eventId: string) {
