@@ -26,6 +26,7 @@ export default function CharacterSummary() {
         <p className="text-sm text-[#F3D66B]">
           Nåværende utfordring
         </p>
+
         <p className="mt-1 font-medium">Nyfødt-søvn</p>
       </div>
     </section>

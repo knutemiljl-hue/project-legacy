@@ -1,23 +1,4 @@
-const tasks = [
-  {
-    title: "Tren styrke",
-    subtitle: "Fullfør treningsøkt",
-    time: "07:00",
-    done: true,
-  },
-  {
-    title: "Vær til stede hjemme",
-    subtitle: "Ingen mobil under familietid",
-    time: "17:00",
-    done: false,
-  },
-  {
-    title: "Forbered klientmøte",
-    subtitle: "BAHR",
-    time: "20:30",
-    done: false,
-  },
-];
+import { dailyTasks } from "@/data/dashboard";
 
 export default function DailyTasks() {
   return (
@@ -27,16 +8,20 @@ export default function DailyTasks() {
           <p className="text-sm font-medium text-[#8D846F]">
             Dagens oppdrag
           </p>
+
           <h2 className="mt-1 text-2xl font-semibold text-[#24312A]">
-            3 oppdrag
+            {dailyTasks.length} oppdrag
           </h2>
         </div>
 
-        <p className="text-sm text-stone-500">1 / 3 fullført</p>
+        <p className="text-sm text-stone-500">
+          {dailyTasks.filter((task) => task.done).length} / {dailyTasks.length}{" "}
+          fullført
+        </p>
       </div>
 
       <div className="space-y-3">
-        {tasks.map((task) => (
+        {dailyTasks.map((task) => (
           <div
             key={task.title}
             className="flex items-center justify-between rounded-2xl bg-[#F7F4EA] p-4"
