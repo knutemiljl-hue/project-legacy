@@ -41,6 +41,7 @@ export default function QuickAddMenu() {
   const [taskSubtitle, setTaskSubtitle] = useState("");
   const [taskDate, setTaskDate] = useState(getTodayAsInputDate());
   const [taskTime, setTaskTime] = useState("");
+  const [taskScope, setTaskScope] = useState<"personal" | "family">("personal");
 
   useEffect(() => {
     setIsMounted(true);
@@ -53,6 +54,7 @@ export default function QuickAddMenu() {
     setTaskSubtitle("");
     setTaskDate(getTodayAsInputDate());
     setTaskTime("");
+    setTaskScope("personal");
   }
 
   function saveTask() {
@@ -69,6 +71,7 @@ export default function QuickAddMenu() {
       subtitle: taskSubtitle.trim() || "Egendefinert oppgave",
       date: taskDate,
       time: taskTime || "Hele dagen",
+      scope: taskScope,
       done: false,
     };
 
@@ -135,6 +138,36 @@ export default function QuickAddMenu() {
 
                 {activeAction === "task" && (
                   <div className="space-y-4">
+                    <div>
+                      <span className="text-sm font-medium text-[#24312A]">
+                        Type oppgave
+                      </span>
+
+                      <div className="mt-2 grid grid-cols-2 gap-3">
+                        <button
+                          onClick={() => setTaskScope("personal")}
+                          className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
+                            taskScope === "personal"
+                              ? "border-[#8EB069] bg-[#EEF5E8] text-[#24312A]"
+                              : "border-stone-200 bg-[#F7F4EA] text-stone-500 hover:brightness-95"
+                          }`}
+                        >
+                          Egen oppgave
+                        </button>
+
+                        <button
+                          onClick={() => setTaskScope("family")}
+                          className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
+                            taskScope === "family"
+                              ? "border-[#8EB069] bg-[#EEF5E8] text-[#24312A]"
+                              : "border-stone-200 bg-[#F7F4EA] text-stone-500 hover:brightness-95"
+                          }`}
+                        >
+                          Familieoppgave
+                        </button>
+                      </div>
+                    </div>
+
                     <label className="block">
                       <span className="text-sm font-medium text-[#24312A]">
                         Tittel

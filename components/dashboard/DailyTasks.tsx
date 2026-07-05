@@ -6,12 +6,15 @@ import { dailyTasks } from "@/data/dashboard";
 const COMPLETED_TASKS_KEY = "project-legacy-daily-tasks";
 const CUSTOM_TASKS_KEY = "project-legacy-custom-daily-tasks";
 
+type TaskScope = "personal" | "family";
+
 type Task = {
   id: string;
   title: string;
   subtitle: string;
   date?: string;
   time: string;
+  scope: TaskScope;
   done: boolean;
 };
 
@@ -27,11 +30,93 @@ function formatDate(date?: string) {
   }).format(new Date(date));
 }
 
+function TaskList({
+  title,
+  tasks,
+  completedTasks,
+  onToggleTask,
+}: {
+  title: string;
+  tasks: Task[];
+  completedTasks: string[];
+  onToggleTask: (taskId: string) => void;
+}) {
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-[#8D846F]">
+          {title}
+        </h3>
+
+        <p className="text-xs text-stone-400">{tasks.length} oppgaver</p>
+      </div>
+
+      {tasks.length === 0 ? (
+        <div className="rounded-2xl bg-[#F7F4EA] p-4">
+          <p className="text-sm text-stone-500">Ingen oppgaver her ennå.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {tasks.map((task) => {
+            const isCompleted = completedTasks.includes(task.id);
+            const formattedDate = formatDate(task.date);
+
+            return (
+              <button
+                key={task.id}
+                onClick={() => onToggleTask(task.id)}
+                className="flex w-full items-center justify-between rounded-2xl bg-[#F7F4EA] p-4 text-left transition hover:brightness-95"
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`grid h-6 w-6 place-items-center rounded-full border ${
+                      isCompleted
+                        ? "border-[#8EB069] bg-[#8EB069] text-white"
+                        : "border-stone-300"
+                    }`}
+                  >
+                    {isCompleted ? "✓" : ""}
+                  </div>
+
+                  <div>
+                    <p className="font-medium text-[#24312A]">{task.title}</p>
+                    <p className="text-sm text-stone-500">{task.subtitle}</p>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  {formattedDate && (
+                    <p className="text-xs text-stone-400">{formattedDate}</p>
+                  )}
+
+                  <p className="text-sm text-stone-500">{task.time}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DailyTasks() {
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
   const [customTasks, setCustomTasks] = useState<Task[]>([]);
 
-  const allTasks = [...dailyTasks, ...customTasks];
+  const defaultTasks: Task[] = dailyTasks.map((task) => ({
+    id: task.id,
+    title: task.title,
+    subtitle: task.subtitle,
+    time: task.time,
+    scope: "personal",
+    done: task.done,
+  }));
+
+  const allTasks: Task[] = [...defaultTasks, ...customTasks];
+
+  const personalTasks = allTasks.filter((task) => task.scope === "personal");
+  const familyTasks = allTasks.filter((task) => task.scope === "family");
 
   useEffect(() => {
     const storedCompletedTasks =
@@ -70,7 +155,12 @@ export default function DailyTasks() {
       ? JSON.parse(storedCustomTasks)
       : [];
 
-    setCustomTasks(parsedCustomTasks);
+    const normalizedTasks: Task[] = parsedCustomTasks.map((task: Task) => ({
+      ...task,
+      scope: task.scope || "personal",
+    }));
+
+    setCustomTasks(normalizedTasks);
   }
 
   function toggleTask(taskId: string) {
@@ -92,7 +182,7 @@ export default function DailyTasks() {
 
   return (
     <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between">
         <div>
           <p className="text-sm font-medium text-[#8D846F]">
             Dagens oppdrag
@@ -108,43 +198,20 @@ export default function DailyTasks() {
         </p>
       </div>
 
-      <div className="space-y-3">
-        {allTasks.map((task) => {
-          const isCompleted = completedTasks.includes(task.id);
-          const formattedDate = formatDate(task.date);
+      <div className="space-y-8">
+        <TaskList
+          title="Egne oppgaver"
+          tasks={personalTasks}
+          completedTasks={completedTasks}
+          onToggleTask={toggleTask}
+        />
 
-          return (
-            <button
-              key={task.id}
-              onClick={() => toggleTask(task.id)}
-              className="flex w-full items-center justify-between rounded-2xl bg-[#F7F4EA] p-4 text-left transition hover:brightness-95"
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`grid h-6 w-6 place-items-center rounded-full border ${
-                    isCompleted
-                      ? "border-[#8EB069] bg-[#8EB069] text-white"
-                      : "border-stone-300"
-                  }`}
-                >
-                  {isCompleted ? "✓" : ""}
-                </div>
-
-                <div>
-                  <p className="font-medium text-[#24312A]">{task.title}</p>
-                  <p className="text-sm text-stone-500">{task.subtitle}</p>
-                </div>
-              </div>
-
-              <div className="text-right">
-                {formattedDate && (
-                  <p className="text-xs text-stone-400">{formattedDate}</p>
-                )}
-                <p className="text-sm text-stone-500">{task.time}</p>
-              </div>
-            </button>
-          );
-        })}
+        <TaskList
+          title="Familieoppgaver"
+          tasks={familyTasks}
+          completedTasks={completedTasks}
+          onToggleTask={toggleTask}
+        />
       </div>
     </section>
   );
