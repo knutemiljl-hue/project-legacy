@@ -16,6 +16,7 @@ type Task = {
   time: string;
   scope: TaskScope;
   done: boolean;
+  isCustom: boolean;
 };
 
 function formatDate(date?: string) {
@@ -35,11 +36,13 @@ function TaskList({
   tasks,
   completedTasks,
   onToggleTask,
+  onDeleteTask,
 }: {
   title: string;
   tasks: Task[];
   completedTasks: string[];
   onToggleTask: (taskId: string) => void;
+  onDeleteTask: (taskId: string) => void;
 }) {
   return (
     <div>
@@ -62,14 +65,16 @@ function TaskList({
             const formattedDate = formatDate(task.date);
 
             return (
-              <button
+              <div
                 key={task.id}
-                onClick={() => onToggleTask(task.id)}
-                className="flex w-full items-center justify-between rounded-2xl bg-[#F7F4EA] p-4 text-left transition hover:brightness-95"
+                className="flex w-full items-center justify-between rounded-2xl bg-[#F7F4EA] p-4 transition hover:brightness-95"
               >
-                <div className="flex items-center gap-3">
+                <button
+                  onClick={() => onToggleTask(task.id)}
+                  className="flex flex-1 items-center gap-3 text-left"
+                >
                   <div
-                    className={`grid h-6 w-6 place-items-center rounded-full border ${
+                    className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border ${
                       isCompleted
                         ? "border-[#8EB069] bg-[#8EB069] text-white"
                         : "border-stone-300"
@@ -82,16 +87,29 @@ function TaskList({
                     <p className="font-medium text-[#24312A]">{task.title}</p>
                     <p className="text-sm text-stone-500">{task.subtitle}</p>
                   </div>
-                </div>
+                </button>
 
-                <div className="text-right">
-                  {formattedDate && (
-                    <p className="text-xs text-stone-400">{formattedDate}</p>
+                <div className="ml-4 flex items-center gap-4">
+                  <div className="text-right">
+                    {formattedDate && (
+                      <p className="text-xs text-stone-400">{formattedDate}</p>
+                    )}
+
+                    <p className="text-sm text-stone-500">{task.time}</p>
+                  </div>
+
+                  {task.isCustom && (
+                    <button
+                      onClick={() => onDeleteTask(task.id)}
+                      className="rounded-full px-3 py-1 text-sm font-medium text-stone-400 transition hover:bg-white hover:text-red-600"
+                      aria-label={`Slett ${task.title}`}
+                      title="Slett oppgave"
+                    >
+                      ×
+                    </button>
                   )}
-
-                  <p className="text-sm text-stone-500">{task.time}</p>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>
@@ -111,6 +129,7 @@ export default function DailyTasks() {
     time: task.time,
     scope: "personal",
     done: task.done,
+    isCustom: false,
   }));
 
   const allTasks: Task[] = [...defaultTasks, ...customTasks];
@@ -158,6 +177,7 @@ export default function DailyTasks() {
     const normalizedTasks: Task[] = parsedCustomTasks.map((task: Task) => ({
       ...task,
       scope: task.scope || "personal",
+      isCustom: true,
     }));
 
     setCustomTasks(normalizedTasks);
@@ -177,6 +197,28 @@ export default function DailyTasks() {
       );
 
       return nextTasks;
+    });
+  }
+
+  function deleteTask(taskId: string) {
+    const nextCustomTasks = customTasks.filter((task) => task.id !== taskId);
+
+    setCustomTasks(nextCustomTasks);
+
+    window.localStorage.setItem(
+      CUSTOM_TASKS_KEY,
+      JSON.stringify(nextCustomTasks)
+    );
+
+    setCompletedTasks((currentTasks) => {
+      const nextCompletedTasks = currentTasks.filter((id) => id !== taskId);
+
+      window.localStorage.setItem(
+        COMPLETED_TASKS_KEY,
+        JSON.stringify(nextCompletedTasks)
+      );
+
+      return nextCompletedTasks;
     });
   }
 
@@ -204,6 +246,7 @@ export default function DailyTasks() {
           tasks={personalTasks}
           completedTasks={completedTasks}
           onToggleTask={toggleTask}
+          onDeleteTask={deleteTask}
         />
 
         <TaskList
@@ -211,6 +254,7 @@ export default function DailyTasks() {
           tasks={familyTasks}
           completedTasks={completedTasks}
           onToggleTask={toggleTask}
+          onDeleteTask={deleteTask}
         />
       </div>
     </section>
