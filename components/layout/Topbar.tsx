@@ -1,3 +1,5 @@
+import QuickAddMenu from "./QuickAddMenu";
+
 export default function Topbar() {
   return (
     <header className="flex items-center justify-between border-b border-stone-200 bg-[#F7F4EA]/80 px-6 py-4 backdrop-blur">
@@ -13,9 +15,7 @@ export default function Topbar() {
           Familien Lie
         </div>
 
-        <button className="rounded-2xl bg-[#F3D66B] px-4 py-2 font-medium text-[#24312A] transition hover:brightness-95">
-          + Ny
-        </button>
+        <QuickAddMenu />
       </div>
     </header>
   );
