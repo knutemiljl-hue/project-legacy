@@ -1,4 +1,5 @@
 import Link from "next/link";
+import FamilyCalendar from "@/components/calendar/FamilyCalendar";
 import FamilyTasksSummary from "@/components/family/FamilyTasksSummary";
 import ShoppingList from "@/components/shopping/ShoppingList";
 
@@ -47,6 +48,8 @@ export default function FamilyPage() {
         <FamilyTasksSummary />
         <ShoppingList />
       </section>
+
+      <FamilyCalendar />
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {familyCards.map((card) => (

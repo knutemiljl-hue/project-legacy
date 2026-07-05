@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import {
+  CalendarEventType,
+  addCalendarEvent,
+  getLocalDateKey as getCalendarDateKey,
+} from "@/lib/calendar";
 import { addShoppingItems } from "@/lib/shopping";
 import {
   getLocalDateKey,
@@ -33,6 +38,36 @@ const actions = [
   },
 ];
 
+const calendarTypes: {
+  id: CalendarEventType;
+  label: string;
+}[] = [
+  {
+    id: "family",
+    label: "Familie",
+  },
+  {
+    id: "health",
+    label: "Helse",
+  },
+  {
+    id: "home",
+    label: "Hjem",
+  },
+  {
+    id: "work",
+    label: "Arbeid",
+  },
+  {
+    id: "social",
+    label: "Sosialt",
+  },
+  {
+    id: "other",
+    label: "Annet",
+  },
+];
+
 export default function QuickAddMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -46,6 +81,13 @@ export default function QuickAddMenu() {
 
   const [shoppingInput, setShoppingInput] = useState("");
 
+  const [calendarTitle, setCalendarTitle] = useState("");
+  const [calendarDate, setCalendarDate] = useState(getCalendarDateKey());
+  const [calendarTime, setCalendarTime] = useState("");
+  const [calendarLocation, setCalendarLocation] = useState("");
+  const [calendarType, setCalendarType] =
+    useState<CalendarEventType>("family");
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -53,12 +95,20 @@ export default function QuickAddMenu() {
   function closeModal() {
     setIsOpen(false);
     setActiveAction(null);
+
     setTaskTitle("");
     setTaskSubtitle("");
     setTaskDate(getLocalDateKey());
     setTaskTime("");
     setTaskScope("personal");
+
     setShoppingInput("");
+
+    setCalendarTitle("");
+    setCalendarDate(getCalendarDateKey());
+    setCalendarTime("");
+    setCalendarLocation("");
+    setCalendarType("family");
   }
 
   function saveTask() {
@@ -94,6 +144,22 @@ export default function QuickAddMenu() {
     closeModal();
   }
 
+  function saveCalendarEvent() {
+    if (!calendarTitle.trim()) {
+      return;
+    }
+
+    addCalendarEvent({
+      title: calendarTitle,
+      date: calendarDate,
+      time: calendarTime,
+      location: calendarLocation,
+      type: calendarType,
+    });
+
+    closeModal();
+  }
+
   const modal =
     isOpen && isMounted
       ? createPortal(
@@ -117,7 +183,9 @@ export default function QuickAddMenu() {
                         ? "Nytt gjøremål"
                         : activeAction === "shopping"
                           ? "Legg til varer"
-                          : "Hva vil du opprette?"}
+                          : activeAction === "calendar"
+                            ? "Ny kalenderoppføring"
+                            : "Hva vil du opprette?"}
                     </h2>
                   </div>
 
@@ -294,9 +362,114 @@ export default function QuickAddMenu() {
                   </div>
                 )}
 
+                {activeAction === "calendar" && (
+                  <div className="space-y-4">
+                    <label className="block">
+                      <span className="text-sm font-medium text-[#24312A]">
+                        Tittel
+                      </span>
+
+                      <input
+                        value={calendarTitle}
+                        onChange={(event) =>
+                          setCalendarTitle(event.target.value)
+                        }
+                        className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F]"
+                        placeholder="F.eks. Helsestasjon"
+                      />
+                    </label>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <label className="block">
+                        <span className="text-sm font-medium text-[#24312A]">
+                          Dato
+                        </span>
+
+                        <input
+                          type="date"
+                          value={calendarDate}
+                          onChange={(event) =>
+                            setCalendarDate(event.target.value)
+                          }
+                          className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F]"
+                        />
+                      </label>
+
+                      <label className="block">
+                        <span className="text-sm font-medium text-[#24312A]">
+                          Klokkeslett
+                        </span>
+
+                        <input
+                          type="time"
+                          value={calendarTime}
+                          onChange={(event) =>
+                            setCalendarTime(event.target.value)
+                          }
+                          className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F]"
+                        />
+                      </label>
+                    </div>
+
+                    <label className="block">
+                      <span className="text-sm font-medium text-[#24312A]">
+                        Sted
+                      </span>
+
+                      <input
+                        value={calendarLocation}
+                        onChange={(event) =>
+                          setCalendarLocation(event.target.value)
+                        }
+                        className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F]"
+                        placeholder="F.eks. Bergen sentrum"
+                      />
+                    </label>
+
+                    <div>
+                      <span className="text-sm font-medium text-[#24312A]">
+                        Type
+                      </span>
+
+                      <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        {calendarTypes.map((type) => (
+                          <button
+                            key={type.id}
+                            onClick={() => setCalendarType(type.id)}
+                            className={`rounded-2xl border px-4 py-3 text-sm font-medium transition ${
+                              calendarType === type.id
+                                ? "border-[#8EB069] bg-[#EEF5E8] text-[#24312A]"
+                                : "border-stone-200 bg-[#F7F4EA] text-stone-500 hover:brightness-95"
+                            }`}
+                          >
+                            {type.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between gap-3 pt-2">
+                      <button
+                        onClick={() => setActiveAction(null)}
+                        className="rounded-2xl bg-[#F7F4EA] px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
+                      >
+                        Tilbake
+                      </button>
+
+                      <button
+                        onClick={saveCalendarEvent}
+                        className="rounded-2xl bg-[#F3D66B] px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
+                      >
+                        Lagre avtale
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {activeAction &&
                   activeAction !== "task" &&
-                  activeAction !== "shopping" && (
+                  activeAction !== "shopping" &&
+                  activeAction !== "calendar" && (
                     <div className="rounded-2xl bg-[#F7F4EA] p-5">
                       <p className="font-semibold text-[#24312A]">
                         Kommer snart
