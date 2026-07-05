@@ -57,20 +57,27 @@ export function saveShoppingItems(items: ShoppingItem[]) {
 }
 
 export function addShoppingItem(title: string) {
-  const trimmedTitle = title.trim();
+  addShoppingItems(title);
+}
 
-  if (!trimmedTitle) {
+export function addShoppingItems(input: string) {
+  const titles = input
+    .split(/\n|,/)
+    .map((title) => title.trim())
+    .filter(Boolean);
+
+  if (titles.length === 0) {
     return;
   }
 
   const existingItems = readShoppingItems();
 
-  const newItem: ShoppingItem = {
-    id: `shopping-${Date.now()}`,
-    title: trimmedTitle,
+  const newItems: ShoppingItem[] = titles.map((title, index) => ({
+    id: `shopping-${Date.now()}-${index}`,
+    title,
     completed: false,
     createdAt: new Date().toISOString(),
-  };
+  }));
 
-  saveShoppingItems([...existingItems, newItem]);
+  saveShoppingItems([...existingItems, ...newItems]);
 }

@@ -2,8 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { addShoppingItem } from "@/lib/shopping";
-import { getLocalDateKey, notifyTasksUpdated, readCustomTasks, saveCustomTasks } from "@/lib/tasks";
+import { addShoppingItems } from "@/lib/shopping";
+import {
+  getLocalDateKey,
+  notifyTasksUpdated,
+  readCustomTasks,
+  saveCustomTasks,
+} from "@/lib/tasks";
 
 const actions = [
   {
@@ -14,7 +19,7 @@ const actions = [
   {
     id: "shopping",
     title: "Ny handleliste",
-    description: "Legg til varer eller ting familien må kjøpe.",
+    description: "Legg til én eller flere varer familien må kjøpe.",
   },
   {
     id: "calendar",
@@ -39,7 +44,7 @@ export default function QuickAddMenu() {
   const [taskTime, setTaskTime] = useState("");
   const [taskScope, setTaskScope] = useState<"personal" | "family">("personal");
 
-  const [shoppingTitle, setShoppingTitle] = useState("");
+  const [shoppingInput, setShoppingInput] = useState("");
 
   useEffect(() => {
     setIsMounted(true);
@@ -53,7 +58,7 @@ export default function QuickAddMenu() {
     setTaskDate(getLocalDateKey());
     setTaskTime("");
     setTaskScope("personal");
-    setShoppingTitle("");
+    setShoppingInput("");
   }
 
   function saveTask() {
@@ -80,12 +85,12 @@ export default function QuickAddMenu() {
     closeModal();
   }
 
-  function saveShoppingItem() {
-    if (!shoppingTitle.trim()) {
+  function saveShoppingItems() {
+    if (!shoppingInput.trim()) {
       return;
     }
 
-    addShoppingItem(shoppingTitle);
+    addShoppingItems(shoppingInput);
     closeModal();
   }
 
@@ -111,7 +116,7 @@ export default function QuickAddMenu() {
                       {activeAction === "task"
                         ? "Nytt gjøremål"
                         : activeAction === "shopping"
-                          ? "Ny vare"
+                          ? "Legg til varer"
                           : "Hva vil du opprette?"}
                     </h2>
                   </div>
@@ -254,18 +259,22 @@ export default function QuickAddMenu() {
                   <div className="space-y-4">
                     <label className="block">
                       <span className="text-sm font-medium text-[#24312A]">
-                        Vare
+                        Varer
                       </span>
 
-                      <input
-                        value={shoppingTitle}
+                      <textarea
+                        value={shoppingInput}
                         onChange={(event) =>
-                          setShoppingTitle(event.target.value)
+                          setShoppingInput(event.target.value)
                         }
-                        className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F]"
-                        placeholder="F.eks. melk, bleier eller kaffe"
+                        className="mt-2 min-h-32 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F]"
+                        placeholder={`F.eks.\nMelk\nKaffe\nBleier\n\nEller: melk, kaffe, bleier`}
                       />
                     </label>
+
+                    <p className="text-sm leading-6 text-stone-500">
+                      Skriv én vare per linje, eller skill dem med komma.
+                    </p>
 
                     <div className="flex justify-between gap-3 pt-2">
                       <button
@@ -276,10 +285,10 @@ export default function QuickAddMenu() {
                       </button>
 
                       <button
-                        onClick={saveShoppingItem}
+                        onClick={saveShoppingItems}
                         className="rounded-2xl bg-[#F3D66B] px-5 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95"
                       >
-                        Legg til vare
+                        Legg til varer
                       </button>
                     </div>
                   </div>
