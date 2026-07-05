@@ -41,6 +41,12 @@ type ArchivedTask = {
   xp: number;
 };
 
+function notifyXpUpdated() {
+  window.setTimeout(() => {
+    window.dispatchEvent(new Event("project-legacy-xp-updated"));
+  }, 0);
+}
+
 function getDateKey(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -107,6 +113,8 @@ function saveCompletionRecords(records: CompletionRecord[]) {
     COMPLETED_TASKS_KEY,
     JSON.stringify(records.map((record) => record.taskId))
   );
+
+  notifyXpUpdated();
 }
 
 function TaskList({
@@ -451,6 +459,8 @@ export default function DailyTasks() {
     setCustomTasks(remainingCustomTasks);
     setCompletionRecords(todayRecords);
     setTaskHistory(nextHistory);
+
+    notifyXpUpdated();
   }
 
   function loadCustomTasks() {
