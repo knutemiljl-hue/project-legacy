@@ -1,44 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-const COMPLETION_RECORDS_KEY = "project-legacy-task-completions";
-const TASK_HISTORY_KEY = "project-legacy-task-history";
-const XP_PER_LEVEL = 500;
-
-type CompletionRecord = {
-  taskId: string;
-  completedAt: string;
-  xp: number;
-};
-
-type ArchivedTask = {
-  id: string;
-  taskId: string;
-  title: string;
-  subtitle: string;
-  date?: string;
-  time: string;
-  scope: "personal" | "family";
-  completedAt: string;
-  xp: number;
-};
-
-function readXpFromStorage() {
-  const storedCompletions = window.localStorage.getItem(COMPLETION_RECORDS_KEY);
-  const storedHistory = window.localStorage.getItem(TASK_HISTORY_KEY);
-
-  const completions: CompletionRecord[] = storedCompletions
-    ? JSON.parse(storedCompletions)
-    : [];
-
-  const history: ArchivedTask[] = storedHistory ? JSON.parse(storedHistory) : [];
-
-  const todayXp = completions.reduce((sum, record) => sum + record.xp, 0);
-  const historyXp = history.reduce((sum, task) => sum + task.xp, 0);
-
-  return todayXp + historyXp;
-}
+import { readTotalXp, XP_PER_LEVEL } from "@/lib/tasks";
 
 function getLevel(totalXp: number) {
   return Math.floor(totalXp / XP_PER_LEVEL) + 1;
@@ -57,7 +20,7 @@ export default function CharacterSummary() {
 
   useEffect(() => {
     function updateXp() {
-      setTotalXp(readXpFromStorage());
+      setTotalXp(readTotalXp());
     }
 
     updateXp();

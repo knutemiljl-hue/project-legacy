@@ -3,139 +3,26 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { dailyTasks } from "@/data/dashboard";
-
-const COMPLETED_TASKS_KEY = "project-legacy-daily-tasks";
-const CUSTOM_TASKS_KEY = "project-legacy-custom-daily-tasks";
-const COMPLETION_RECORDS_KEY = "project-legacy-task-completions";
-const TASK_HISTORY_KEY = "project-legacy-task-history";
-
-const XP_PER_TASK = 5;
-
-type TaskScope = "personal" | "family";
-
-type Task = {
-  id: string;
-  title: string;
-  subtitle: string;
-  date?: string;
-  time: string;
-  scope: TaskScope;
-  done: boolean;
-  isCustom: boolean;
-};
-
-type CompletionRecord = {
-  taskId: string;
-  completedAt: string;
-  xp: number;
-};
-
-type ArchivedTask = {
-  id: string;
-  taskId: string;
-  title: string;
-  subtitle: string;
-  date?: string;
-  time: string;
-  scope: TaskScope;
-  completedAt: string;
-  xp: number;
-};
-
-function notifyXpUpdated() {
-  window.setTimeout(() => {
-    window.dispatchEvent(new Event("project-legacy-xp-updated"));
-  }, 0);
-}
-
-function getLocalDateKey(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
-
-function getDateKey(date: Date) {
-  return getLocalDateKey(date);
-}
-
-function getTodayKey() {
-  return getLocalDateKey();
-}
-
-function isTaskForToday(task: Task) {
-  if (!task.isCustom) {
-    return true;
-  }
-
-  if (!task.date) {
-    return true;
-  }
-
-  return task.date === getTodayKey();
-}
-
-function formatDate(date?: string) {
-  if (!date) {
-    return null;
-  }
-
-  const [year, month, day] = date.split("-").map(Number);
-  const localDate = new Date(year, month - 1, day);
-
-  return new Intl.DateTimeFormat("nb-NO", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  }).format(localDate);
-}
-
-function getScopeLabel(scope: TaskScope) {
-  return scope === "family" ? "Familie" : "Egen";
-}
-
-function getDefaultTasks(): Task[] {
-  return dailyTasks.map((task) => ({
-    id: task.id,
-    title: task.title,
-    subtitle: task.subtitle,
-    time: task.time,
-    scope: "personal",
-    done: task.done,
-    isCustom: false,
-  }));
-}
-
-function readCustomTasks(): Task[] {
-  const storedCustomTasks = window.localStorage.getItem(CUSTOM_TASKS_KEY);
-  const parsedCustomTasks = storedCustomTasks
-    ? JSON.parse(storedCustomTasks)
-    : [];
-
-  return parsedCustomTasks.map((task: Task) => ({
-    ...task,
-    scope: task.scope || "personal",
-    isCustom: true,
-  }));
-}
-
-function readTaskHistory(): ArchivedTask[] {
-  const storedHistory = window.localStorage.getItem(TASK_HISTORY_KEY);
-
-  return storedHistory ? JSON.parse(storedHistory) : [];
-}
-
-function saveCompletionRecords(records: CompletionRecord[]) {
-  window.localStorage.setItem(COMPLETION_RECORDS_KEY, JSON.stringify(records));
-
-  window.localStorage.setItem(
-    COMPLETED_TASKS_KEY,
-    JSON.stringify(records.map((record) => record.taskId))
-  );
-
-  notifyXpUpdated();
-}
+import {
+  ArchivedTask,
+  CompletionRecord,
+  Task,
+  XP_PER_TASK,
+  createDefaultTasks,
+  formatTaskDate,
+  getDateKey,
+  getScopeLabel,
+  getTodayKey,
+  isTaskForToday,
+  notifyXpUpdated,
+  readCompletionRecords,
+  readCustomTasks,
+  readStoredCompletedTaskIds,
+  readTaskHistory,
+  saveCompletionRecords,
+  saveCustomTasks,
+  saveTaskHistory,
+} from "@/lib/tasks";
 
 function TaskList({
   title,
@@ -175,7 +62,7 @@ function TaskList({
       ) : (
         <div className="space-y-3">
           {visibleTasks.map((task) => {
-            const formattedDate = formatDate(task.date);
+            const formattedDate = formatTaskDate(task.date);
 
             return (
               <div
@@ -268,7 +155,7 @@ function CompletedTasks({
       ) : (
         <div className="space-y-2">
           {tasks.map((task) => {
-            const formattedDate = formatDate(task.date);
+            const formattedDate = formatTaskDate(task.date);
 
             return (
               <div
@@ -349,7 +236,7 @@ export default function DailyTasks() {
   const [customTasks, setCustomTasks] = useState<Task[]>([]);
   const [taskHistory, setTaskHistory] = useState<ArchivedTask[]>([]);
 
-  const defaultTasks = getDefaultTasks();
+  const defaultTasks = createDefaultTasks(dailyTasks);
   const allTasks: Task[] = [...defaultTasks, ...customTasks];
   const todayTasks = allTasks.filter((task) => isTaskForToday(task));
 
@@ -385,21 +272,15 @@ export default function DailyTasks() {
     const loadedCustomTasks = readCustomTasks();
     const loadedHistory = readTaskHistory();
 
-    const storedCompletionRecords = window.localStorage.getItem(
-      COMPLETION_RECORDS_KEY
-    );
-
-    const storedCompletedTaskIds =
-      window.localStorage.getItem(COMPLETED_TASKS_KEY);
+    const storedCompletionRecords = readCompletionRecords();
+    const storedCompletedTaskIds = readStoredCompletedTaskIds();
 
     let records: CompletionRecord[] = [];
 
-    if (storedCompletionRecords) {
-      records = JSON.parse(storedCompletionRecords);
-    } else if (storedCompletedTaskIds) {
-      const parsedTaskIds: string[] = JSON.parse(storedCompletedTaskIds);
-
-      records = parsedTaskIds.map((taskId) => ({
+    if (storedCompletionRecords.length > 0) {
+      records = storedCompletionRecords;
+    } else if (storedCompletedTaskIds.length > 0) {
+      records = storedCompletedTaskIds.map((taskId) => ({
         taskId,
         completedAt: new Date().toISOString(),
         xp: XP_PER_TASK,
@@ -424,7 +305,10 @@ export default function DailyTasks() {
       (record) => getDateKey(new Date(record.completedAt)) !== todayKey
     );
 
-    const allTasksForArchive = [...getDefaultTasks(), ...loadedCustomTasks];
+    const allTasksForArchive = [
+      ...createDefaultTasks(dailyTasks),
+      ...loadedCustomTasks,
+    ];
 
     const archivedTasks: ArchivedTask[] = oldRecords
       .map((record) => {
@@ -466,16 +350,8 @@ export default function DailyTasks() {
       (task) => !archivedTaskIds.has(task.id)
     );
 
-    window.localStorage.setItem(
-      TASK_HISTORY_KEY,
-      JSON.stringify(nextHistory)
-    );
-
-    window.localStorage.setItem(
-      CUSTOM_TASKS_KEY,
-      JSON.stringify(remainingCustomTasks)
-    );
-
+    saveTaskHistory(nextHistory);
+    saveCustomTasks(remainingCustomTasks);
     saveCompletionRecords(todayRecords);
 
     setCustomTasks(remainingCustomTasks);
@@ -516,11 +392,7 @@ export default function DailyTasks() {
     const nextCustomTasks = customTasks.filter((task) => task.id !== taskId);
 
     setCustomTasks(nextCustomTasks);
-
-    window.localStorage.setItem(
-      CUSTOM_TASKS_KEY,
-      JSON.stringify(nextCustomTasks)
-    );
+    saveCustomTasks(nextCustomTasks);
 
     setCompletionRecords((currentRecords) => {
       const nextRecords = currentRecords.filter(
