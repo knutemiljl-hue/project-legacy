@@ -38,7 +38,9 @@ export default function Sidebar() {
       <nav className="mt-10 space-y-2">
         {navigationItems.map((item) => {
           const isActive =
-            item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+            item.href === "/"
+              ? pathname === "/"
+              : pathname.startsWith(item.href);
 
           return (
             <Link
@@ -55,16 +57,6 @@ export default function Sidebar() {
           );
         })}
       </nav>
-
-      <div className="mt-10 rounded-3xl bg-white p-4 shadow-sm">
-        <p className="text-sm font-semibold text-[#24312A]">
-          Familien Lie
-        </p>
-
-        <p className="mt-2 text-sm leading-6 text-stone-500">
-          Et rolig system for hverdag, familie og retning.
-        </p>
-      </div>
     </aside>
   );
 }

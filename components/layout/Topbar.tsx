@@ -24,7 +24,7 @@ export default function Topbar() {
 
       <div className="flex items-center gap-3">
         <div className="rounded-2xl border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-[#24312A]">
-          Familien Lie
+          Knut Emil
         </div>
 
         <QuickAddMenu />
