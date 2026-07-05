@@ -3,6 +3,13 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import {
+  CalendarDays,
+  CheckCircle2,
+  Coins,
+  Plus,
+  ShoppingBasket,
+} from "lucide-react";
+import {
   CalendarEventType,
   addCalendarEvent,
   getLocalDateKey as getCalendarDateKey,
@@ -21,21 +28,25 @@ const actions = [
     id: "task",
     title: "Nytt gjøremål",
     description: "Legg til en oppgave for deg eller familien.",
+    icon: CheckCircle2,
   },
   {
     id: "shopping",
     title: "Ny handleliste",
     description: "Legg til én eller flere varer familien må kjøpe.",
+    icon: ShoppingBasket,
   },
   {
     id: "calendar",
     title: "Ny kalenderoppføring",
     description: "Legg inn en avtale eller hendelse.",
+    icon: CalendarDays,
   },
   {
     id: "finance",
     title: "Økonomioppdatering",
     description: "Oppdater fond, buffer, gjeld eller nettoformue.",
+    icon: Coins,
   },
 ];
 
@@ -202,21 +213,29 @@ export default function QuickAddMenu() {
 
                 {!activeAction && (
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {actions.map((action) => (
-                      <button
-                        key={action.id}
-                        onClick={() => setActiveAction(action.id)}
-                        className="rounded-2xl bg-[#F7F4EA] p-4 text-left transition hover:brightness-95"
-                      >
-                        <p className="font-semibold text-[#24312A]">
-                          {action.title}
-                        </p>
+                    {actions.map((action) => {
+                      const Icon = action.icon;
 
-                        <p className="mt-2 text-sm leading-6 text-stone-600">
-                          {action.description}
-                        </p>
-                      </button>
-                    ))}
+                      return (
+                        <button
+                          key={action.id}
+                          onClick={() => setActiveAction(action.id)}
+                          className="rounded-2xl bg-[#F7F4EA] p-4 text-left transition hover:brightness-95"
+                        >
+                          <div className="mb-3 grid h-10 w-10 place-items-center rounded-2xl bg-white text-[#4F773D]">
+                            <Icon size={20} strokeWidth={2} />
+                          </div>
+
+                          <p className="font-semibold text-[#24312A]">
+                            {action.title}
+                          </p>
+
+                          <p className="mt-2 text-sm leading-6 text-stone-600">
+                            {action.description}
+                          </p>
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
 
@@ -501,9 +520,10 @@ export default function QuickAddMenu() {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="rounded-2xl bg-[#3F6F35] px-4 py-2 font-medium text-white shadow-sm transition hover:brightness-110"
+        className="flex items-center gap-2 rounded-2xl bg-[#3F6F35] px-4 py-2 font-medium text-white shadow-sm transition hover:brightness-110"
       >
-        + Ny
+        <Plus size={17} strokeWidth={2.25} />
+        Ny
       </button>
 
       {modal}

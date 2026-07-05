@@ -3,34 +3,42 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { legacyUsers, readActiveUser } from "@/lib/users";
+import {
+  BookOpen,
+  Home,
+  Leaf,
+  Settings,
+  Sprout,
+  Users,
+} from "lucide-react";
+import { readActiveUser } from "@/lib/users";
 
 const navigationItems = [
   {
     label: "Oversikt",
     href: "/",
-    icon: "⌂",
+    icon: Home,
   },
   {
     label: "Familien",
     href: "/family",
-    icon: "♧",
+    icon: Users,
   },
   {
     label: "Journal",
     href: "/journal",
-    icon: "□",
+    icon: BookOpen,
   },
   {
     label: "Innstillinger",
     href: "/settings",
-    icon: "⚙",
+    icon: Settings,
   },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const [activeUser, setActiveUser] = useState(legacyUsers[0]);
+  const [activeUser, setActiveUser] = useState(readActiveUser());
 
   useEffect(() => {
     function updateActiveUser() {
@@ -57,8 +65,8 @@ export default function Sidebar() {
   return (
     <aside className="hidden min-h-screen w-64 shrink-0 border-r border-[#E2D8C7] bg-white/35 px-5 py-6 backdrop-blur-xl lg:flex lg:flex-col">
       <div className="flex items-center gap-3">
-        <div className="grid h-10 w-10 place-items-center rounded-2xl bg-[#EEF5E8] text-lg text-[#4F773D]">
-          ❦
+        <div className="grid h-10 w-10 place-items-center rounded-2xl bg-[#EEF5E8] text-[#4F773D]">
+          <Leaf size={21} strokeWidth={2} />
         </div>
 
         <div>
@@ -72,6 +80,8 @@ export default function Sidebar() {
 
       <nav className="mt-12 space-y-2">
         {navigationItems.map((item) => {
+          const Icon = item.icon;
+
           const isActive =
             item.href === "/"
               ? pathname === "/"
@@ -88,13 +98,13 @@ export default function Sidebar() {
               }`}
             >
               <span
-                className={`grid h-7 w-7 place-items-center rounded-xl text-sm ${
+                className={`grid h-7 w-7 place-items-center rounded-xl ${
                   isActive
                     ? "bg-[#F7F4EA] text-[#4F773D]"
                     : "bg-transparent text-stone-400"
                 }`}
               >
-                {item.icon}
+                <Icon size={17} strokeWidth={2} />
               </span>
 
               {item.label}
@@ -112,9 +122,15 @@ export default function Sidebar() {
           {activeUser.name}
         </p>
 
-        <p className="mt-2 text-sm leading-6 text-stone-500">
-          Aktiv bruker i Project Legacy.
-        </p>
+        <div className="mt-3 flex items-start gap-2 text-sm leading-6 text-stone-500">
+          <Sprout
+            size={16}
+            strokeWidth={2}
+            className="mt-1 shrink-0 text-[#4F773D]"
+          />
+
+          <p>Aktiv bruker i Project Legacy.</p>
+        </div>
       </div>
     </aside>
   );
