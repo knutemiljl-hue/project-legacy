@@ -13,6 +13,7 @@ import {
   sortCalendarEvents,
   updateCalendarEvent,
 } from "@/lib/calendar";
+import { getUserDisplayName } from "@/lib/users";
 
 type FamilyCalendarProps = {
   compact?: boolean;
@@ -49,6 +50,18 @@ const calendarTypes: {
     label: "Annet",
   },
 ];
+
+function CreatedByText({ createdBy }: { createdBy?: string }) {
+  if (!createdBy) {
+    return null;
+  }
+
+  return (
+    <span className="text-xs text-stone-400">
+      · Lagt til av {getUserDisplayName(createdBy)}
+    </span>
+  );
+}
 
 function groupEventsByDate(events: CalendarEvent[]) {
   return events.reduce<Record<string, CalendarEvent[]>>((groups, event) => {
@@ -221,7 +234,11 @@ export default function FamilyCalendar({
     loadEvents();
     setSelectedDate(editDate);
     setVisibleMonth(
-      new Date(Number(editDate.slice(0, 4)), Number(editDate.slice(5, 7)) - 1, 1)
+      new Date(
+        Number(editDate.slice(0, 4)),
+        Number(editDate.slice(5, 7)) - 1,
+        1
+      )
     );
     closeEditModal();
   }
@@ -245,7 +262,9 @@ export default function FamilyCalendar({
     [visibleMonth]
   );
 
-  const selectedDateEvents = sortCalendarEvents(eventsByDate[selectedDate] ?? []);
+  const selectedDateEvents = sortCalendarEvents(
+    eventsByDate[selectedDate] ?? []
+  );
 
   return (
     <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-6 shadow-sm ring-1 ring-black/5">
@@ -424,6 +443,7 @@ export default function FamilyCalendar({
                       <p className="mt-1 text-sm text-stone-500">
                         {event.time}
                         {event.location ? ` · ${event.location}` : ""}
+                        <CreatedByText createdBy={event.createdBy} />
                       </p>
                     </div>
 
@@ -490,6 +510,7 @@ export default function FamilyCalendar({
 
                       <p className="mt-1 text-sm text-stone-500">
                         {formatCalendarDate(event.date)}
+                        <CreatedByText createdBy={event.createdBy} />
                       </p>
                     </div>
 
@@ -515,6 +536,12 @@ export default function FamilyCalendar({
                   <h2 className="mt-1 text-2xl font-semibold text-[#24312A]">
                     Rediger avtale
                   </h2>
+
+                  {editingEvent.createdBy && (
+                    <p className="mt-1 text-sm text-stone-500">
+                      Lagt til av {getUserDisplayName(editingEvent.createdBy)}
+                    </p>
+                  )}
                 </div>
 
                 <button
