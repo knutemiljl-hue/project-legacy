@@ -1,9 +1,26 @@
+import Link from "next/link";
+
 const navItems = [
-  "Oversikt",
-  "Familien",
-  "Meg",
-  "Journal",
-  "Innstillinger",
+  {
+    label: "Oversikt",
+    href: "/",
+  },
+  {
+    label: "Familien",
+    href: "/family",
+  },
+  {
+    label: "Meg",
+    href: "/me",
+  },
+  {
+    label: "Journal",
+    href: "/journal",
+  },
+  {
+    label: "Innstillinger",
+    href: "/settings",
+  },
 ];
 
 export default function Sidebar() {
@@ -13,6 +30,7 @@ export default function Sidebar() {
         <p className="text-sm uppercase tracking-[0.2em] text-[#8D846F]">
           Project
         </p>
+
         <h1 className="mt-1 text-2xl font-semibold text-[#24312A]">
           Legacy
         </h1>
@@ -20,12 +38,13 @@ export default function Sidebar() {
 
       <nav className="space-y-2">
         {navItems.map((item) => (
-          <button
-            key={item}
-            className="w-full rounded-2xl px-4 py-3 text-left text-sm font-medium text-[#24312A] transition hover:bg-[#E5DB8E]/40"
+          <Link
+            key={item.href}
+            href={item.href}
+            className="block w-full rounded-2xl px-4 py-3 text-left text-sm font-medium text-[#24312A] transition hover:bg-[#E5DB8E]/40"
           >
-            {item}
-          </button>
+            {item.label}
+          </Link>
         ))}
       </nav>
     </aside>
