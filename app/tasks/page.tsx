@@ -7,12 +7,17 @@ import {
   Circle,
   Clock,
   PackageCheck,
+  Pencil,
   RotateCcw,
+  Save,
   ShoppingBag,
   Trash2,
+  X,
 } from "lucide-react";
 import {
   Task,
+  TaskCategory,
+  TaskScope,
   deleteTask,
   formatTaskDate,
   getDateKey,
@@ -23,6 +28,7 @@ import {
   readTasks,
   subscribeToTasks,
   toggleTaskCompleted,
+  updateTask,
 } from "@/lib/tasks";
 import {
   LegacyUserId,
@@ -92,14 +98,154 @@ function TaskRow({
   activeUserId,
   onToggleTask,
   onDeleteTask,
+  onUpdateTask,
 }: {
   task: Task;
   activeUserId: LegacyUserId;
   onToggleTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
+  onUpdateTask: (
+    task: Task,
+    input: {
+      title: string;
+      date?: string;
+      scope: TaskScope;
+      category: TaskCategory;
+    }
+  ) => Promise<void>;
 }) {
   const formattedDate = formatTaskDate(task.date);
   const isOwnCompletion = task.completedBy === activeUserId;
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(task.title);
+  const [editDate, setEditDate] = useState(task.date ?? "");
+  const [editScope, setEditScope] = useState<TaskScope>(task.scope);
+  const [editCategory, setEditCategory] = useState<TaskCategory>(task.category);
+  const [isSaving, setIsSaving] = useState(false);
+
+  function startEditing() {
+    setEditTitle(task.title);
+    setEditDate(task.date ?? "");
+    setEditScope(task.scope);
+    setEditCategory(task.category);
+    setIsEditing(true);
+  }
+
+  function cancelEditing() {
+    setIsEditing(false);
+    setEditTitle(task.title);
+    setEditDate(task.date ?? "");
+    setEditScope(task.scope);
+    setEditCategory(task.category);
+  }
+
+  async function saveTaskEdit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!editTitle.trim()) {
+      return;
+    }
+
+    setIsSaving(true);
+
+    await onUpdateTask(task, {
+      title: editTitle,
+      date: editDate,
+      scope: editScope,
+      category: editCategory,
+    });
+
+    setIsSaving(false);
+    setIsEditing(false);
+  }
+
+  if (isEditing) {
+    return (
+      <form
+        onSubmit={saveTaskEdit}
+        className="flex flex-col gap-4 px-4 py-4"
+      >
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,1fr)_170px_150px_180px]">
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
+              Tittel
+            </span>
+
+            <input
+              value={editTitle}
+              onChange={(event) => setEditTitle(event.target.value)}
+              className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-medium text-[#24312A] outline-none transition focus:border-[#8D846F]"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
+              Dato
+            </span>
+
+            <input
+              type="date"
+              value={editDate}
+              onChange={(event) => setEditDate(event.target.value)}
+              className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F]"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
+              Gjelder
+            </span>
+
+            <select
+              value={editScope}
+              onChange={(event) => setEditScope(event.target.value as TaskScope)}
+              className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F]"
+            >
+              <option value="personal">Egen</option>
+              <option value="family">Familie</option>
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
+              Type
+            </span>
+
+            <select
+              value={editCategory}
+              onChange={(event) =>
+                setEditCategory(event.target.value as TaskCategory)
+              }
+              className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F]"
+            >
+              <option value="task">Vanlig oppgave</option>
+              <option value="purchase">StÃ¸rre oppgave</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={cancelEditing}
+            className="flex items-center justify-center gap-1 rounded-2xl bg-white px-4 py-2 text-sm font-medium text-[#24312A] transition hover:brightness-95"
+          >
+            <X size={14} strokeWidth={2.25} />
+            Avbryt
+          </button>
+
+          <button
+            type="submit"
+            disabled={isSaving}
+            className="flex items-center justify-center gap-1 rounded-2xl bg-[#3F6F35] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Save size={14} strokeWidth={2.25} />
+            {isSaving ? "Lagrer" : "Lagre"}
+          </button>
+        </div>
+      </form>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -170,26 +316,50 @@ function TaskRow({
         </div>
 
         {!task.done && (
-          <button
-            type="button"
-            onClick={() => onDeleteTask(task.id)}
-            className="grid h-8 w-8 place-items-center rounded-full text-stone-400 transition hover:bg-white hover:text-red-600"
-            aria-label={`Slett ${task.title}`}
-            title="Slett oppgave"
-          >
-            <Trash2 size={15} strokeWidth={2} />
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={startEditing}
+              className="grid h-8 w-8 place-items-center rounded-full text-stone-400 transition hover:bg-white hover:text-[#24312A]"
+              aria-label={`Rediger ${task.title}`}
+              title="Rediger oppgave"
+            >
+              <Pencil size={15} strokeWidth={2} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onDeleteTask(task.id)}
+              className="grid h-8 w-8 place-items-center rounded-full text-stone-400 transition hover:bg-white hover:text-red-600"
+              aria-label={`Slett ${task.title}`}
+              title="Slett oppgave"
+            >
+              <Trash2 size={15} strokeWidth={2} />
+            </button>
+          </>
         )}
 
         {task.done && (
-          <button
-            type="button"
-            onClick={() => onToggleTask(task)}
-            className="flex w-fit items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-medium text-[#24312A] transition hover:brightness-95"
-          >
-            <RotateCcw size={12} strokeWidth={2} />
-            Angre
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={startEditing}
+              className="grid h-8 w-8 place-items-center rounded-full text-stone-400 transition hover:bg-white hover:text-[#24312A]"
+              aria-label={`Rediger ${task.title}`}
+              title="Rediger oppgave"
+            >
+              <Pencil size={15} strokeWidth={2} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onToggleTask(task)}
+              className="flex w-fit items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-medium text-[#24312A] transition hover:brightness-95"
+            >
+              <RotateCcw size={12} strokeWidth={2} />
+              Angre
+            </button>
+          </div>
         )}
       </div>
     </div>
@@ -205,6 +375,7 @@ function TaskSection({
   icon,
   onToggleTask,
   onDeleteTask,
+  onUpdateTask,
 }: {
   title: string;
   description: string;
@@ -214,6 +385,15 @@ function TaskSection({
   icon: React.ReactNode;
   onToggleTask: (task: Task) => void;
   onDeleteTask: (taskId: string) => void;
+  onUpdateTask: (
+    task: Task,
+    input: {
+      title: string;
+      date?: string;
+      scope: TaskScope;
+      category: TaskCategory;
+    }
+  ) => Promise<void>;
 }) {
   return (
     <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-4 shadow-sm ring-1 ring-black/5 sm:p-6">
@@ -255,6 +435,7 @@ function TaskSection({
                 activeUserId={activeUserId}
                 onToggleTask={onToggleTask}
                 onDeleteTask={onDeleteTask}
+                onUpdateTask={onUpdateTask}
               />
             </div>
           ))}
@@ -336,6 +517,42 @@ export default function TasksBoard() {
     );
 
     await deleteTask(taskId);
+    await loadTasks();
+  }
+
+  async function handleUpdateTask(
+    task: Task,
+    input: {
+      title: string;
+      date?: string;
+      scope: TaskScope;
+      category: TaskCategory;
+    }
+  ) {
+    const nextTitle = input.title.trim();
+
+    if (!nextTitle) {
+      return;
+    }
+
+    setTasks((currentTasks) =>
+      currentTasks.map((currentTask) =>
+        currentTask.id === task.id
+          ? {
+              ...currentTask,
+              title: nextTitle,
+              date: input.date || undefined,
+              scope: input.scope,
+              category: input.category,
+            }
+          : currentTask
+      )
+    );
+
+    await updateTask(task.id, {
+      ...input,
+      title: nextTitle,
+    });
     await loadTasks();
   }
 
@@ -439,6 +656,7 @@ export default function TasksBoard() {
         icon={<CheckCircle2 size={21} strokeWidth={2} />}
         onToggleTask={handleToggleTask}
         onDeleteTask={handleDeleteTask}
+        onUpdateTask={handleUpdateTask}
       />
 
       <TaskSection
@@ -450,6 +668,7 @@ export default function TasksBoard() {
         icon={<Clock size={21} strokeWidth={2} />}
         onToggleTask={handleToggleTask}
         onDeleteTask={handleDeleteTask}
+        onUpdateTask={handleUpdateTask}
       />
 
       <TaskSection
@@ -461,6 +680,7 @@ export default function TasksBoard() {
         icon={<ShoppingBag size={21} strokeWidth={2} />}
         onToggleTask={handleToggleTask}
         onDeleteTask={handleDeleteTask}
+        onUpdateTask={handleUpdateTask}
       />
 
       <TaskSection
@@ -472,6 +692,7 @@ export default function TasksBoard() {
         icon={<PackageCheck size={21} strokeWidth={2} />}
         onToggleTask={handleToggleTask}
         onDeleteTask={handleDeleteTask}
+        onUpdateTask={handleUpdateTask}
       />
     </main>
   );

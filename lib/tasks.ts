@@ -69,6 +69,13 @@ export type RecurringTaskInput = TaskInput & {
   recurrenceUntil?: string;
 };
 
+export type TaskUpdateInput = {
+  title: string;
+  date?: string;
+  scope: TaskScope;
+  category: TaskCategory;
+};
+
 type TaskRow = {
   id: string;
   title: string;
@@ -434,6 +441,31 @@ export async function toggleTaskCompleted(task: Task) {
       xp: XP_PER_TASK,
     })
     .eq("id", task.id);
+
+  if (error) {
+    console.error("Kunne ikke oppdatere oppgave:", error);
+    return;
+  }
+
+  notifyTaskAndXpUpdates();
+}
+
+export async function updateTask(taskId: string, input: TaskUpdateInput) {
+  const title = input.title.trim();
+
+  if (!title) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("legacy_tasks")
+    .update({
+      title,
+      task_date: input.date || null,
+      scope: input.scope,
+      task_category: input.category,
+    })
+    .eq("id", taskId);
 
   if (error) {
     console.error("Kunne ikke oppdatere oppgave:", error);

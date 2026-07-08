@@ -98,6 +98,26 @@ export async function updateShoppingItemCompleted(
   notifyShoppingUpdated();
 }
 
+export async function updateShoppingItemTitle(itemId: string, title: string) {
+  const trimmedTitle = title.trim();
+
+  if (!trimmedTitle) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("legacy_shopping_items")
+    .update({ title: trimmedTitle })
+    .eq("id", itemId);
+
+  if (error) {
+    console.error("Kunne ikke oppdatere vare:", error);
+    return;
+  }
+
+  notifyShoppingUpdated();
+}
+
 export async function deleteShoppingItem(itemId: string) {
   const { error } = await supabase
     .from("legacy_shopping_items")
