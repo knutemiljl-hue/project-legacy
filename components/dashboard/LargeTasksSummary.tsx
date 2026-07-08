@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Check, Circle, ShoppingBag } from "lucide-react";
+import { Check, Circle, Pencil, ShoppingBag } from "lucide-react";
+import InlineTaskEditor, {
+  TaskEditInput,
+} from "@/components/tasks/InlineTaskEditor";
 import {
   Task,
   formatTaskDate,
@@ -11,6 +14,7 @@ import {
   readTasks,
   subscribeToTasks,
   toggleTaskCompleted,
+  updateTask,
 } from "@/lib/tasks";
 import {
   LegacyUserId,
@@ -59,6 +63,7 @@ export default function LargeTasksSummary() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activeUserId, setActiveUserId] = useState<LegacyUserId>("knut");
   const [isLoading, setIsLoading] = useState(true);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     loadTasks();
@@ -121,6 +126,34 @@ export default function LargeTasksSummary() {
     await loadTasks();
   }
 
+  async function handleUpdateTask(task: Task, input: TaskEditInput) {
+    const nextTitle = input.title.trim();
+
+    if (!nextTitle) {
+      return;
+    }
+
+    setTasks((currentTasks) =>
+      currentTasks.map((currentTask) =>
+        currentTask.id === task.id
+          ? {
+              ...currentTask,
+              title: nextTitle,
+              date: input.date || undefined,
+              scope: input.scope,
+              category: input.category,
+            }
+          : currentTask
+      )
+    );
+
+    await updateTask(task.id, {
+      ...input,
+      title: nextTitle,
+    });
+    await loadTasks();
+  }
+
   const visibleLargeTasks = sortTasksByDateAndTime(
     tasks
       .filter(isPurchaseTask)
@@ -179,6 +212,7 @@ export default function LargeTasksSummary() {
         <div className="overflow-hidden rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA]">
           {visiblePreviewTasks.map((task, index) => {
             const formattedDate = formatTaskDate(task.date);
+            const isEditing = editingTaskId === task.id;
 
             return (
               <div
@@ -189,43 +223,72 @@ export default function LargeTasksSummary() {
                     : ""
                 }`}
               >
-                <button
-                  type="button"
-                  onClick={() => handleToggleTask(task)}
-                  className="flex flex-1 items-start gap-3 text-left sm:items-center"
-                >
-                  <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white text-stone-300 sm:mt-0">
-                    <Circle size={13} strokeWidth={2} />
-                  </span>
-
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium text-[#24312A]">
-                        {task.title}
-                      </p>
-
-                      <span className="rounded-full bg-white px-2 py-1 text-xs font-medium text-[#8D846F]">
-                        {getScopeLabel(task.scope)}
-                      </span>
-                    </div>
-
-                    <p className="mt-1 text-sm leading-5 text-stone-500">
-                      {task.subtitle}
-                      <CreatedByText createdBy={task.createdBy} />
-                    </p>
+                {isEditing ? (
+                  <div className="w-full">
+                    <InlineTaskEditor
+                      task={task}
+                      onCancel={() => setEditingTaskId(null)}
+                      onSave={async (input) => {
+                        await handleUpdateTask(task, input);
+                        setEditingTaskId(null);
+                      }}
+                    />
                   </div>
-                </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleTask(task)}
+                      className="flex flex-1 items-start gap-3 text-left sm:items-center"
+                    >
+                      <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white text-stone-300 sm:mt-0">
+                        <Circle size={13} strokeWidth={2} />
+                      </span>
 
-                <div className="ml-9 text-left sm:ml-4 sm:text-right">
-                  {formattedDate && (
-                    <p className="text-xs text-stone-400">{formattedDate}</p>
-                  )}
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-medium text-[#24312A]">
+                            {task.title}
+                          </p>
 
-                  <p className="flex items-center gap-1 text-sm text-stone-500 sm:justify-end">
-                    <Check size={13} strokeWidth={2} />
-                    Kryss av
-                  </p>
-                </div>
+                          <span className="rounded-full bg-white px-2 py-1 text-xs font-medium text-[#8D846F]">
+                            {getScopeLabel(task.scope)}
+                          </span>
+                        </div>
+
+                        <p className="mt-1 text-sm leading-5 text-stone-500">
+                          {task.subtitle}
+                          <CreatedByText createdBy={task.createdBy} />
+                        </p>
+                      </div>
+                    </button>
+
+                    <div className="ml-9 flex items-center justify-between gap-3 sm:ml-4 sm:justify-end">
+                      <div className="text-left sm:text-right">
+                        {formattedDate && (
+                          <p className="text-xs text-stone-400">
+                            {formattedDate}
+                          </p>
+                        )}
+
+                        <p className="flex items-center gap-1 text-sm text-stone-500 sm:justify-end">
+                          <Check size={13} strokeWidth={2} />
+                          Kryss av
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setEditingTaskId(task.id)}
+                        className="grid h-8 w-8 place-items-center rounded-full text-stone-400 transition hover:bg-white hover:text-[#24312A]"
+                        aria-label={`Rediger ${task.title}`}
+                        title="Rediger oppgave"
+                      >
+                        <Pencil size={15} strokeWidth={2} />
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             );
           })}

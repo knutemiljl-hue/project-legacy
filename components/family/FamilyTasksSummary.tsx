@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Check, CheckCircle2, Circle, RotateCcw } from "lucide-react";
+import { Check, CheckCircle2, Circle, Pencil, RotateCcw } from "lucide-react";
+import InlineTaskEditor, {
+  TaskEditInput,
+} from "@/components/tasks/InlineTaskEditor";
 import {
   ArchivedTask,
   Task,
@@ -14,6 +17,7 @@ import {
   readTasks,
   subscribeToTasks,
   toggleTaskCompleted,
+  updateTask,
 } from "@/lib/tasks";
 import {
   LegacyUserId,
@@ -50,6 +54,7 @@ export default function FamilyTasksSummary() {
   const [history, setHistory] = useState<ArchivedTask[]>([]);
   const [activeUserId, setActiveUserId] = useState<LegacyUserId>("knut");
   const [isLoading, setIsLoading] = useState(true);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -113,6 +118,34 @@ export default function FamilyTasksSummary() {
     );
 
     await toggleTaskCompleted(task);
+    await loadData();
+  }
+
+  async function handleUpdateTask(task: Task, input: TaskEditInput) {
+    const nextTitle = input.title.trim();
+
+    if (!nextTitle) {
+      return;
+    }
+
+    setFamilyTasks((currentTasks) =>
+      currentTasks.map((currentTask) =>
+        currentTask.id === task.id
+          ? {
+              ...currentTask,
+              title: nextTitle,
+              date: input.date || undefined,
+              scope: input.scope,
+              category: input.category,
+            }
+          : currentTask
+      )
+    );
+
+    await updateTask(task.id, {
+      ...input,
+      title: nextTitle,
+    });
     await loadData();
   }
 
@@ -224,6 +257,7 @@ export default function FamilyTasksSummary() {
           <div className="overflow-hidden rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA]">
             {openFamilyTasks.map((task, index) => {
               const formattedDate = formatTaskDate(task.date);
+              const isEditing = editingTaskId === task.id;
 
               return (
                 <div
@@ -234,34 +268,63 @@ export default function FamilyTasksSummary() {
                       : ""
                   }`}
                 >
-                  <button
-                    type="button"
-                    onClick={() => handleToggleTask(task)}
-                    className="flex flex-1 items-start gap-3 text-left sm:items-center"
-                  >
-                    <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white text-stone-300 sm:mt-0">
-                      <Circle size={13} strokeWidth={2} />
-                    </span>
-
-                    <div className="min-w-0">
-                      <p className="font-medium text-[#24312A]">
-                        {task.title}
-                      </p>
-
-                      <p className="mt-1 text-sm leading-5 text-stone-500">
-                        {task.subtitle}
-                        <CreatedByText createdBy={task.createdBy} />
-                      </p>
+                  {isEditing ? (
+                    <div className="w-full">
+                      <InlineTaskEditor
+                        task={task}
+                        onCancel={() => setEditingTaskId(null)}
+                        onSave={async (input) => {
+                          await handleUpdateTask(task, input);
+                          setEditingTaskId(null);
+                        }}
+                      />
                     </div>
-                  </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleTask(task)}
+                        className="flex flex-1 items-start gap-3 text-left sm:items-center"
+                      >
+                        <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white text-stone-300 sm:mt-0">
+                          <Circle size={13} strokeWidth={2} />
+                        </span>
 
-                  <div className="ml-9 text-left sm:ml-4 sm:text-right">
-                    {formattedDate && (
-                      <p className="text-xs text-stone-400">{formattedDate}</p>
-                    )}
+                        <div className="min-w-0">
+                          <p className="font-medium text-[#24312A]">
+                            {task.title}
+                          </p>
 
-                    <p className="text-sm text-stone-500">{task.time}</p>
-                  </div>
+                          <p className="mt-1 text-sm leading-5 text-stone-500">
+                            {task.subtitle}
+                            <CreatedByText createdBy={task.createdBy} />
+                          </p>
+                        </div>
+                      </button>
+
+                      <div className="ml-9 flex items-center justify-between gap-3 sm:ml-4 sm:justify-end">
+                        <div className="text-left sm:text-right">
+                          {formattedDate && (
+                            <p className="text-xs text-stone-400">
+                              {formattedDate}
+                            </p>
+                          )}
+
+                          <p className="text-sm text-stone-500">{task.time}</p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setEditingTaskId(task.id)}
+                          className="grid h-8 w-8 place-items-center rounded-full text-stone-400 transition hover:bg-white hover:text-[#24312A]"
+                          aria-label={`Rediger ${task.title}`}
+                          title="Rediger oppgave"
+                        >
+                          <Pencil size={15} strokeWidth={2} />
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               );
             })}
