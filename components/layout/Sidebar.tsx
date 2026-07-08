@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Home,
   Leaf,
+  Settings,
   Sprout,
   Users,
 } from "lucide-react";
@@ -18,6 +19,7 @@ const navigationItems = [
   { label: "Gjøremål", href: "/tasks", icon: CheckCircle2 },
   { label: "Kalender", href: "/calendar", icon: CalendarDays },
   { label: "Familien", href: "/family", icon: Users },
+  { label: "Innstillinger", href: "/settings", icon: Settings },
 ];
 
 export default function Sidebar() {

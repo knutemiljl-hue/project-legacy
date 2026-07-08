@@ -1,4 +1,5 @@
 ﻿import { supabase } from "@/lib/supabase";
+import { notifyTaskCreatedByPush } from "@/lib/push-events";
 import { LegacyUserId, readActiveUser } from "@/lib/users";
 
 export const XP_PER_TASK = 5;
@@ -541,6 +542,11 @@ export async function addTask(input: TaskInput) {
   }
 
   notifyTaskAndXpUpdates();
+  notifyTaskCreatedByPush({
+    createdBy: activeUser.id,
+    scope: input.scope,
+    title,
+  });
 }
 
 export async function addRecurringTasks(input: RecurringTaskInput) {
@@ -601,6 +607,11 @@ export async function addRecurringTasks(input: RecurringTaskInput) {
   }
 
   notifyTaskAndXpUpdates();
+  notifyTaskCreatedByPush({
+    createdBy: activeUser.id,
+    scope: input.scope,
+    title,
+  });
 }
 
 export async function toggleTaskCompleted(task: Task) {

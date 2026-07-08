@@ -74,22 +74,19 @@ export default function Topbar() {
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <ThemeToggle />
 
-          <div className="flex max-w-[138px] items-center gap-2 rounded-2xl border border-[#E2D8C7] bg-white/85 px-2 py-2 shadow-sm ring-1 ring-black/5 sm:max-w-none sm:px-3">
-            <div className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#EEF5E8] text-xs font-semibold text-[#4F773D]">
-              {activeUser?.initials ?? "KE"}
-            </div>
-
+          <div className="flex items-center rounded-2xl border border-[#E2D8C7] bg-white/85 px-2 py-2 shadow-sm ring-1 ring-black/5">
             <select
               value={activeUserId}
               onChange={(event) =>
                 changeUser(event.target.value as LegacyUserId)
               }
-              className="min-w-0 max-w-[82px] bg-transparent text-sm font-semibold text-[#24312A] outline-none sm:max-w-none"
+              className="h-7 w-11 rounded-xl bg-[#EEF5E8] text-center text-xs font-semibold text-[#4F773D] outline-none"
               aria-label="Velg bruker"
+              title={activeUser?.name ?? "Velg bruker"}
             >
               {legacyUsers.map((user) => (
                 <option key={user.id} value={user.id}>
-                  {user.name}
+                  {user.initials}
                 </option>
               ))}
             </select>

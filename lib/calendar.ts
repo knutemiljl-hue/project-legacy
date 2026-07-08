@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { notifyCalendarEventCreatedByPush } from "@/lib/push-events";
 import { LegacyUserId, readActiveUser } from "@/lib/users";
 
 export const MAX_CALENDAR_RECURRENCE_ITEMS = 52;
@@ -415,6 +416,10 @@ export async function addCalendarEvent(event: CalendarEventInput) {
   }
 
   notifyCalendarUpdated();
+  notifyCalendarEventCreatedByPush({
+    owner: event.calendarOwner ?? "family",
+    title: normalizedEvent.title,
+  });
 }
 
 export async function addRecurringCalendarEvents(
@@ -476,6 +481,10 @@ export async function addRecurringCalendarEvents(
   }
 
   notifyCalendarUpdated();
+  notifyCalendarEventCreatedByPush({
+    owner: event.calendarOwner ?? "family",
+    title: normalizedEvent.title,
+  });
 }
 
 export async function updateCalendarEvent(

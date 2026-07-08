@@ -1,3 +1,5 @@
+import PushNotificationSettings from "@/components/settings/PushNotificationSettings";
+
 const settingsSections = [
   {
     title: "Bruker",
@@ -45,6 +47,8 @@ export default function SettingsPage() {
           </p>
         </div>
       </div>
+
+      <PushNotificationSettings />
 
       <section className="grid grid-cols-1 gap-7 xl:grid-cols-[1.1fr_0.9fr]">
         <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-6 shadow-sm ring-1 ring-black/5">
