@@ -112,11 +112,18 @@ const calendarRecurrenceOptions: CalendarRecurrenceFrequency[] = [
   "monthly",
 ];
 
+const DEFAULT_CALENDAR_START_TIME = "09:00";
+const DEFAULT_CALENDAR_END_TIME = "10:00";
+
 function parseSubtaskInput(input: string) {
   return input
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+function isDateKey(value: unknown): value is string {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
 function getActionToneClasses(tone: "green" | "gold" | "blue" | "stone") {
@@ -227,7 +234,13 @@ export default function QuickAddMenu() {
 
   const [calendarTitle, setCalendarTitle] = useState("");
   const [calendarDate, setCalendarDate] = useState(getCalendarDateKey());
-  const [calendarTime, setCalendarTime] = useState("");
+  const [calendarEndDate, setCalendarEndDate] = useState(getCalendarDateKey());
+  const [calendarStartTime, setCalendarStartTime] = useState(
+    DEFAULT_CALENDAR_START_TIME
+  );
+  const [calendarEndTime, setCalendarEndTime] = useState(
+    DEFAULT_CALENDAR_END_TIME
+  );
   const [calendarLocation, setCalendarLocation] = useState("");
   const [calendarType, setCalendarType] =
     useState<CalendarEventType>("family");
@@ -249,6 +262,40 @@ export default function QuickAddMenu() {
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    function openCalendarAdd(event: Event) {
+      const detail = (event as CustomEvent<{ date?: unknown }>).detail;
+      const selectedDate = isDateKey(detail?.date)
+        ? detail.date
+        : getCalendarDateKey();
+
+      setIsOpen(true);
+      setActiveAction("calendar");
+      setCalendarTitle("");
+      setCalendarDate(selectedDate);
+      setCalendarEndDate(selectedDate);
+      setCalendarStartTime(DEFAULT_CALENDAR_START_TIME);
+      setCalendarEndTime(DEFAULT_CALENDAR_END_TIME);
+      setCalendarLocation("");
+      setCalendarType("family");
+      setCalendarOwner("family");
+      setCalendarRecurrenceFrequency("none");
+      setCalendarRecurrenceUntil(selectedDate);
+    }
+
+    window.addEventListener(
+      "project-legacy-open-calendar-add",
+      openCalendarAdd
+    );
+
+    return () => {
+      window.removeEventListener(
+        "project-legacy-open-calendar-add",
+        openCalendarAdd
+      );
+    };
+  }, []);
+
   function resetFormState() {
     setActiveAction(null);
 
@@ -267,7 +314,9 @@ export default function QuickAddMenu() {
 
     setCalendarTitle("");
     setCalendarDate(getCalendarDateKey());
-    setCalendarTime("");
+    setCalendarEndDate(getCalendarDateKey());
+    setCalendarStartTime(DEFAULT_CALENDAR_START_TIME);
+    setCalendarEndTime(DEFAULT_CALENDAR_END_TIME);
     setCalendarLocation("");
     setCalendarType("family");
     setCalendarOwner("family");
@@ -331,10 +380,23 @@ export default function QuickAddMenu() {
       return;
     }
 
+    if (calendarEndDate < calendarDate) {
+      return;
+    }
+
+    if (
+      calendarDate === calendarEndDate &&
+      calendarEndTime < calendarStartTime
+    ) {
+      return;
+    }
+
     await addRecurringCalendarEvents({
       title: calendarTitle,
-      date: calendarDate,
-      time: calendarTime,
+      startDate: calendarDate,
+      endDate: calendarEndDate,
+      startTime: calendarStartTime,
+      endTime: calendarEndTime,
       location: calendarLocation,
       type: calendarType,
       calendarOwner,
@@ -347,6 +409,9 @@ export default function QuickAddMenu() {
 
   const isTaskFlow = activeAction === "task" || activeAction === "purchase";
   const isPurchaseFlow = activeAction === "purchase";
+  const calendarHasInvalidRange =
+    calendarEndDate < calendarDate ||
+    (calendarDate === calendarEndDate && calendarEndTime < calendarStartTime);
 
   const modalTitle =
     activeAction === "task"
@@ -722,14 +787,53 @@ export default function QuickAddMenu() {
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <label className="block">
                         <span className="text-sm font-medium text-[#24312A]">
-                          Første dato
+                          Startdato
                         </span>
 
                         <input
                           type="date"
                           value={calendarDate}
+                          onChange={(event) => {
+                            const nextDate = event.target.value;
+
+                            setCalendarDate(nextDate);
+
+                            if (calendarEndDate < nextDate) {
+                              setCalendarEndDate(nextDate);
+                            }
+                          }}
+                          className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition focus:border-[#8D846F] sm:text-sm"
+                        />
+                      </label>
+
+                      <label className="block">
+                        <span className="text-sm font-medium text-[#24312A]">
+                          Sluttdato
+                        </span>
+
+                        <input
+                          type="date"
+                          value={calendarEndDate}
+                          min={calendarDate}
                           onChange={(event) =>
-                            setCalendarDate(event.target.value)
+                            setCalendarEndDate(event.target.value)
+                          }
+                          className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition focus:border-[#8D846F] sm:text-sm"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <label className="block">
+                        <span className="text-sm font-medium text-[#24312A]">
+                          Starttidspunkt
+                        </span>
+
+                        <input
+                          type="time"
+                          value={calendarStartTime}
+                          onChange={(event) =>
+                            setCalendarStartTime(event.target.value)
                           }
                           className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition focus:border-[#8D846F] sm:text-sm"
                         />
@@ -737,19 +841,30 @@ export default function QuickAddMenu() {
 
                       <label className="block">
                         <span className="text-sm font-medium text-[#24312A]">
-                          Klokkeslett
+                          Sluttidspunkt
                         </span>
 
                         <input
                           type="time"
-                          value={calendarTime}
+                          value={calendarEndTime}
+                          min={
+                            calendarDate === calendarEndDate
+                              ? calendarStartTime
+                              : undefined
+                          }
                           onChange={(event) =>
-                            setCalendarTime(event.target.value)
+                            setCalendarEndTime(event.target.value)
                           }
                           className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition focus:border-[#8D846F] sm:text-sm"
                         />
                       </label>
                     </div>
+
+                    {calendarHasInvalidRange && (
+                      <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm leading-6 text-red-700">
+                        Slutt må være etter start.
+                      </p>
+                    )}
 
                     <label className="block">
                       <span className="text-sm font-medium text-[#24312A]">
@@ -875,7 +990,8 @@ export default function QuickAddMenu() {
                       <button
                         type="button"
                         onPointerUp={saveCalendarEvent}
-                        className="rounded-2xl bg-[#3F6F35] px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:brightness-110"
+                        disabled={calendarHasInvalidRange}
+                        className="rounded-2xl bg-[#3F6F35] px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         Lagre avtale
                       </button>

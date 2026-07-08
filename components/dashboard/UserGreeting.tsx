@@ -6,6 +6,7 @@ import { CalendarDays, CheckCircle2, ShoppingBag } from "lucide-react";
 import {
   CalendarEvent,
   getLocalDateKey as getCalendarDateKey,
+  isCalendarEventInDateRange,
   readCalendarEvents,
   subscribeToCalendarEvents,
 } from "@/lib/calendar";
@@ -59,21 +60,18 @@ function isVisibleForActiveUser(task: Task, activeUserId: LegacyUserId) {
   return task.createdBy === activeUserId;
 }
 
-function getSevenDaysFromTodayKey() {
-  const sevenDaysFromToday = new Date();
-
-  sevenDaysFromToday.setDate(sevenDaysFromToday.getDate() + 7);
-
-  return getCalendarDateKey(sevenDaysFromToday);
-}
-
-function countUpcomingEvents(events: CalendarEvent[]) {
+function countTodaysVisibleEvents(
+  events: CalendarEvent[],
+  activeUserId: LegacyUserId
+) {
   const todayKey = getCalendarDateKey();
-  const sevenDaysFromTodayKey = getSevenDaysFromTodayKey();
 
-  return events.filter(
-    (event) => event.date >= todayKey && event.date <= sevenDaysFromTodayKey
-  ).length;
+  return events.filter((event) => {
+    const isVisibleOwner =
+      event.calendarOwner === activeUserId || event.calendarOwner === "family";
+
+    return isVisibleOwner && isCalendarEventInDateRange(event, todayKey, todayKey);
+  }).length;
 }
 
 function StatusChip({
@@ -160,7 +158,7 @@ export default function UserGreeting() {
 
     setStats({
       todayTasks,
-      upcomingEvents: countUpcomingEvents(events),
+      upcomingEvents: countTodaysVisibleEvents(events, nextActiveUser.id),
       largeTasks,
     });
   }
@@ -241,7 +239,7 @@ export default function UserGreeting() {
           />
 
           <StatusChip
-            label="Neste 7 dager"
+            label="Avtaler i dag"
             value={`${stats.upcomingEvents} avtaler`}
             icon={<CalendarDays size={18} strokeWidth={2.25} />}
             tone="calendar"

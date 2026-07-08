@@ -14,18 +14,22 @@ import {
   CalendarEvent,
   CalendarEventType,
   CalendarOwner,
-  deleteCalendarEvent,
+  deleteCalendarEventAndSeries,
   formatCalendarDate,
+  formatCalendarEventDateRange,
+  formatCalendarEventTime,
   formatCalendarMonth,
   getCalendarOwnerBadgeClass,
   getCalendarOwnerDotClass,
   getCalendarOwnerLabel,
+  getCalendarEventDateKeys,
   getEventTypeLabel,
   getLocalDateKey,
+  isCalendarEventInDateRange,
   readCalendarEvents,
   sortCalendarEvents,
   subscribeToCalendarEvents,
-  updateCalendarEvent,
+  updateCalendarEventAndFuture,
 } from "@/lib/calendar";
 import { getUserDisplayName } from "@/lib/users";
 
@@ -110,11 +114,13 @@ function CalendarOwnerLegend() {
 
 function groupEventsByDate(events: CalendarEvent[]) {
   return events.reduce<Record<string, CalendarEvent[]>>((groups, event) => {
-    if (!groups[event.date]) {
-      groups[event.date] = [];
-    }
+    getCalendarEventDateKeys(event).forEach((date) => {
+      if (!groups[date]) {
+        groups[date] = [];
+      }
 
-    groups[event.date].push(event);
+      groups[date].push(event);
+    });
 
     return groups;
   }, {});
@@ -134,6 +140,27 @@ function getDateKeyFromParts(year: number, monthIndex: number, day: number) {
   const actualDay = String(date.getDate()).padStart(2, "0");
 
   return `${actualYear}-${actualMonth}-${actualDay}`;
+}
+
+function getDateDifferenceInDays(startDate: string, endDate: string) {
+  const [startYear, startMonth, startDay] = startDate.split("-").map(Number);
+  const [endYear, endMonth, endDay] = endDate.split("-").map(Number);
+  const start = new Date(startYear, startMonth - 1, startDay);
+  const end = new Date(endYear, endMonth - 1, endDay);
+
+  return Math.max(
+    0,
+    Math.round((end.getTime() - start.getTime()) / 86_400_000)
+  );
+}
+
+function addDaysToDateKey(dateKey: string, days: number) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  date.setDate(date.getDate() + days);
+
+  return getLocalDateKey(date);
 }
 
 function getCalendarDays(monthDate: Date) {
@@ -239,14 +266,55 @@ function getWeekLabel(selectedDate: string) {
 }
 
 function getInitialEditState(event: CalendarEvent | null) {
+  const startTime = event?.startTime ?? event?.time ?? "";
+
   return {
     title: event?.title ?? "",
-    date: event?.date ?? getLocalDateKey(),
-    time: event?.time === "Hele dagen" ? "" : event?.time ?? "",
+    date: event?.startDate ?? event?.date ?? getLocalDateKey(),
+    endDate: event?.endDate ?? event?.startDate ?? event?.date ?? getLocalDateKey(),
+    startTime: startTime === "Hele dagen" ? "09:00" : startTime,
+    endTime: event?.endTime ?? "10:00",
     location: event?.location ?? "",
     type: event?.type ?? "family",
     calendarOwner: event?.calendarOwner ?? "family",
   };
+}
+
+function openNewCalendarEventForDate(date: string) {
+  window.dispatchEvent(
+    new CustomEvent("project-legacy-open-calendar-add", {
+      detail: { date },
+    })
+  );
+}
+
+function formatCalendarListDate(date: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  const localDate = new Date(year, month - 1, day);
+  const weekday = new Intl.DateTimeFormat("nb-NO", {
+    weekday: "short",
+  })
+    .format(localDate)
+    .replace(/\.$/, "");
+  const monthName = new Intl.DateTimeFormat("nb-NO", {
+    month: "long",
+  }).format(localDate);
+
+  return `${weekday} ${day}. ${monthName}`;
+}
+
+function formatCalendarListDateRange(event: CalendarEvent) {
+  const startDate = event.startDate || event.date;
+  const endDate =
+    event.endDate && event.endDate >= startDate ? event.endDate : startDate;
+
+  if (startDate === endDate) {
+    return formatCalendarListDate(startDate);
+  }
+
+  return `${formatCalendarListDate(startDate)} - ${formatCalendarListDate(
+    endDate
+  )}`;
 }
 
 function EventMiniCard({ event }: { event: CalendarEvent }) {
@@ -275,12 +343,14 @@ function EventListButton({
   total,
   onClick,
   variant = "white",
+  showDate = false,
 }: {
   event: CalendarEvent;
   index: number;
   total: number;
   onClick: () => void;
   variant?: "white" | "cream";
+  showDate?: boolean;
 }) {
   return (
     <button
@@ -305,12 +375,27 @@ function EventListButton({
           </div>
 
           <p className="mt-1 flex flex-wrap items-center gap-1 text-sm leading-5 text-stone-500">
+            {showDate && (
+              <>
+                <CalendarDays size={13} strokeWidth={2} />
+                {formatCalendarListDateRange(event)}
+              </>
+            )}
+
             <Clock size={13} strokeWidth={2} />
-            {event.time}
+            {formatCalendarEventTime(event)}
+
+            {!showDate && event.endDate !== event.startDate && (
+              <>
+                <span>-</span>
+                <CalendarDays size={13} strokeWidth={2} />
+                {formatCalendarEventDateRange(event)}
+              </>
+            )}
 
             {event.location && (
               <>
-                <span>·</span>
+                <span>-</span>
                 <MapPin size={13} strokeWidth={2} />
                 {event.location}
               </>
@@ -345,7 +430,9 @@ export default function FamilyCalendar({
 
   const [editTitle, setEditTitle] = useState("");
   const [editDate, setEditDate] = useState(getLocalDateKey());
-  const [editTime, setEditTime] = useState("");
+  const [editEndDate, setEditEndDate] = useState(getLocalDateKey());
+  const [editStartTime, setEditStartTime] = useState("09:00");
+  const [editEndTime, setEditEndTime] = useState("10:00");
   const [editLocation, setEditLocation] = useState("");
   const [editType, setEditType] = useState<CalendarEventType>("family");
   const [editCalendarOwner, setEditCalendarOwner] =
@@ -434,13 +521,19 @@ export default function FamilyCalendar({
     setSelectedDate(getLocalDateKey(today));
   }
 
+  function selectDate(date: string) {
+    setSelectedDate(date);
+  }
+
   function openEditModal(event: CalendarEvent) {
     const initialState = getInitialEditState(event);
 
     setEditingEvent(event);
     setEditTitle(initialState.title);
     setEditDate(initialState.date);
-    setEditTime(initialState.time);
+    setEditEndDate(initialState.endDate);
+    setEditStartTime(initialState.startTime);
+    setEditEndTime(initialState.endTime);
     setEditLocation(initialState.location);
     setEditType(initialState.type);
     setEditCalendarOwner(initialState.calendarOwner);
@@ -450,7 +543,9 @@ export default function FamilyCalendar({
     setEditingEvent(null);
     setEditTitle("");
     setEditDate(getLocalDateKey());
-    setEditTime("");
+    setEditEndDate(getLocalDateKey());
+    setEditStartTime("09:00");
+    setEditEndTime("10:00");
     setEditLocation("");
     setEditType("family");
     setEditCalendarOwner("family");
@@ -461,10 +556,19 @@ export default function FamilyCalendar({
       return;
     }
 
-    await updateCalendarEvent(editingEvent.id, {
+    if (
+      editEndDate < editDate ||
+      (editDate === editEndDate && editEndTime < editStartTime)
+    ) {
+      return;
+    }
+
+    await updateCalendarEventAndFuture(editingEvent, {
       title: editTitle,
-      date: editDate,
-      time: editTime,
+      startDate: editDate,
+      endDate: editEndDate,
+      startTime: editStartTime,
+      endTime: editEndTime,
       location: editLocation,
       type: editType,
       calendarOwner: editCalendarOwner,
@@ -483,8 +587,8 @@ export default function FamilyCalendar({
     closeEditModal();
   }
 
-  async function removeEvent(eventId: string) {
-    await deleteCalendarEvent(eventId);
+  async function removeEvent(event: CalendarEvent) {
+    await deleteCalendarEventAndSeries(event);
     await loadEvents();
     closeEditModal();
   }
@@ -496,7 +600,7 @@ export default function FamilyCalendar({
   const sevenDaysFromTodayKey = getLocalDateKey(sevenDaysFromToday);
 
   const upcomingEvents = events.filter(
-    (event) => event.date >= todayKey && event.date <= sevenDaysFromTodayKey
+    (event) => isCalendarEventInDateRange(event, todayKey, sevenDaysFromTodayKey)
   );
 
   const visibleUpcomingEvents = compact
@@ -518,6 +622,9 @@ export default function FamilyCalendar({
   const selectedDateEvents = sortCalendarEvents(
     eventsByDate[selectedDate] ?? []
   );
+  const editHasInvalidRange =
+    editEndDate < editDate ||
+    (editDate === editEndDate && editEndTime < editStartTime);
 
   const periodLabel =
     viewMode === "week" && !compact
@@ -659,7 +766,7 @@ export default function FamilyCalendar({
                       <button
                         type="button"
                         key={day.date}
-                        onClick={() => setSelectedDate(day.date)}
+                        onClick={() => selectDate(day.date)}
                         className={`min-h-14 rounded-2xl border p-1.5 text-left transition hover:bg-white sm:min-h-20 sm:p-2 ${
                           isSelected
                             ? "border-[#8EB069] bg-white shadow-sm ring-2 ring-[#8EB069]"
@@ -727,7 +834,7 @@ export default function FamilyCalendar({
                       type="button"
                       key={day.date}
                       onClick={() => {
-                        setSelectedDate(day.date);
+                        selectDate(day.date);
                         setVisibleMonth(
                           new Date(
                             Number(day.date.slice(0, 4)),
@@ -816,9 +923,19 @@ export default function FamilyCalendar({
                 </h3>
               </div>
 
-              <p className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-medium text-stone-500">
-                {selectedDateEvents.length} avtaler
-              </p>
+              <div className="flex shrink-0 items-center gap-2">
+                <p className="rounded-full bg-white px-3 py-1 text-xs font-medium text-stone-500">
+                  {selectedDateEvents.length} avtaler
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => openNewCalendarEventForDate(selectedDate)}
+                  className="rounded-full border border-sky-200 bg-white px-3 py-1 text-xs font-semibold text-sky-700 shadow-sm transition hover:bg-sky-50"
+                >
+                  Ny avtale
+                </button>
+              </div>
             </div>
 
             {selectedDateEvents.length === 0 ? (
@@ -869,12 +986,15 @@ export default function FamilyCalendar({
                     event={event}
                     index={index}
                     total={visibleUpcomingEvents.length}
+                    showDate
                     onClick={() => {
-                      setSelectedDate(event.date);
+                      const eventStartDate = event.startDate || event.date;
+
+                      setSelectedDate(eventStartDate);
                       setVisibleMonth(
                         new Date(
-                          Number(event.date.slice(0, 4)),
-                          Number(event.date.slice(5, 7)) - 1,
+                          Number(eventStartDate.slice(0, 4)),
+                          Number(eventStartDate.slice(5, 7)) - 1,
                           1
                         )
                       );
@@ -935,30 +1055,75 @@ export default function FamilyCalendar({
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <label className="block">
                     <span className="text-sm font-medium text-[#24312A]">
-                      Dato
+                      Startdato
                     </span>
 
                     <input
                       type="date"
                       value={editDate}
-                      onChange={(event) => setEditDate(event.target.value)}
+                      onChange={(event) => {
+                        const nextDate = event.target.value;
+                        const durationDays = getDateDifferenceInDays(
+                          editDate,
+                          editEndDate
+                        );
+
+                        setEditDate(nextDate);
+                        setEditEndDate(addDaysToDateKey(nextDate, durationDays));
+                      }}
                       className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F]"
                     />
                   </label>
 
                   <label className="block">
                     <span className="text-sm font-medium text-[#24312A]">
-                      Klokkeslett
+                      Sluttdato
                     </span>
 
                     <input
-                      type="time"
-                      value={editTime}
-                      onChange={(event) => setEditTime(event.target.value)}
+                      type="date"
+                      value={editEndDate}
+                      min={editDate}
+                      onChange={(event) => setEditEndDate(event.target.value)}
                       className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F]"
                     />
                   </label>
                 </div>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="text-sm font-medium text-[#24312A]">
+                      Starttidspunkt
+                    </span>
+
+                    <input
+                      type="time"
+                      value={editStartTime}
+                      onChange={(event) => setEditStartTime(event.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F]"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-sm font-medium text-[#24312A]">
+                      Sluttidspunkt
+                    </span>
+
+                    <input
+                      type="time"
+                      value={editEndTime}
+                      min={editDate === editEndDate ? editStartTime : undefined}
+                      onChange={(event) => setEditEndTime(event.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F]"
+                    />
+                  </label>
+                </div>
+
+                {editHasInvalidRange && (
+                  <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm leading-6 text-red-700">
+                    Slutt må være etter start.
+                  </p>
+                )}
 
                 <label className="block">
                   <span className="text-sm font-medium text-[#24312A]">
@@ -1027,7 +1192,7 @@ export default function FamilyCalendar({
                 <div className="flex flex-col justify-between gap-3 pt-2 sm:flex-row">
                   <button
                     type="button"
-                    onClick={() => removeEvent(editingEvent.id)}
+                    onClick={() => removeEvent(editingEvent)}
                     className="flex items-center justify-center gap-2 rounded-2xl bg-red-50 px-5 py-3 text-sm font-medium text-red-700 transition hover:brightness-95"
                   >
                     <Trash2 size={15} strokeWidth={2} />
@@ -1046,7 +1211,8 @@ export default function FamilyCalendar({
                     <button
                       type="button"
                       onClick={saveEditedEvent}
-                      className="rounded-2xl bg-[#3F6F35] px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:brightness-110"
+                      disabled={editHasInvalidRange}
+                      className="rounded-2xl bg-[#3F6F35] px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Lagre endring
                     </button>
