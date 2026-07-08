@@ -431,16 +431,31 @@ export async function addRecurringTasks(input: RecurringTaskInput) {
 export async function toggleTaskCompleted(task: Task) {
   const activeUser = readActiveUser();
   const nextDone = !task.done;
+  const completedAt = new Date().toISOString();
 
-  const { error } = await supabase
-    .from("legacy_tasks")
-    .update({
-      is_done: nextDone,
-      completed_by: nextDone ? activeUser.id : null,
-      completed_at: nextDone ? new Date().toISOString() : null,
-      xp: XP_PER_TASK,
-    })
-    .eq("id", task.id);
+  const update = nextDone
+    ? {
+        is_done: true,
+        is_archived: true,
+        completed_by: activeUser.id,
+        completed_at: completedAt,
+        archived_at: completedAt,
+        xp: task.xp ?? XP_PER_TASK,
+      }
+    : {
+        is_done: false,
+        is_archived: false,
+        completed_by: null,
+        completed_at: null,
+        archived_at: null,
+        xp: task.xp ?? XP_PER_TASK,
+      };
+
+  let query = supabase.from("legacy_tasks").update(update).eq("id", task.id);
+
+  query = nextDone ? query.eq("is_done", false) : query.eq("is_done", true);
+
+  const { error } = await query;
 
   if (error) {
     console.error("Kunne ikke oppdatere oppgave:", error);

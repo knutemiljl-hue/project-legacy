@@ -1,27 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-
-const TASK_HISTORY_KEY = "project-legacy-task-history";
-
-type TaskScope = "personal" | "family";
-
-type ArchivedTask = {
-  id: string;
-  taskId: string;
-  title: string;
-  subtitle: string;
-  date?: string;
-  time: string;
-  scope: TaskScope;
-  completedAt: string;
-  xp: number;
-};
-
-function getScopeLabel(scope: TaskScope) {
-  return scope === "family" ? "Familie" : "Egen";
-}
+import { useCallback, useEffect, useState } from "react";
+import {
+  ArchivedTask,
+  getScopeLabel,
+  readArchivedTasks,
+  subscribeToTasks,
+} from "@/lib/tasks";
+import { getUserDisplayName } from "@/lib/users";
 
 function formatCompletedAt(completedAt: string) {
   return new Intl.DateTimeFormat("nb-NO", {
@@ -36,20 +23,36 @@ function formatCompletedAt(completedAt: string) {
 
 export default function ArchivePage() {
   const [history, setHistory] = useState<ArchivedTask[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadHistory = useCallback(async () => {
+    setIsLoading(true);
+
+    const nextHistory = await readArchivedTasks();
+
+    setHistory(nextHistory);
+    setIsLoading(false);
+  }, []);
 
   useEffect(() => {
-    const storedHistory = window.localStorage.getItem(TASK_HISTORY_KEY);
-    const parsedHistory: ArchivedTask[] = storedHistory
-      ? JSON.parse(storedHistory)
-      : [];
+    const initialLoadTimer = window.setTimeout(() => {
+      loadHistory();
+    }, 0);
 
-    const sortedHistory = parsedHistory.sort(
-      (a, b) =>
-        new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
-    );
+    const unsubscribeFromTasks = subscribeToTasks(loadHistory);
 
-    setHistory(sortedHistory);
-  }, []);
+    window.addEventListener("project-legacy-tasks-updated", loadHistory);
+    window.addEventListener("project-legacy-xp-updated", loadHistory);
+    window.addEventListener("focus", loadHistory);
+
+    return () => {
+      window.clearTimeout(initialLoadTimer);
+      unsubscribeFromTasks();
+      window.removeEventListener("project-legacy-tasks-updated", loadHistory);
+      window.removeEventListener("project-legacy-xp-updated", loadHistory);
+      window.removeEventListener("focus", loadHistory);
+    };
+  }, [loadHistory]);
 
   const totalXp = history.reduce((sum, task) => sum + task.xp, 0);
   const familyTasks = history.filter((task) => task.scope === "family");
@@ -66,7 +69,7 @@ export default function ArchivePage() {
           </h1>
 
           <p className="mt-2 text-sm leading-6 text-stone-600">
-            Her samles oppgaver som er fullført tidligere dager.
+            Her samles oppgaver som er fullført.
           </p>
         </div>
 
@@ -82,14 +85,14 @@ export default function ArchivePage() {
         <div className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
           <p className="text-sm text-stone-500">Arkiverte oppgaver</p>
           <p className="mt-2 text-2xl font-semibold text-[#24312A]">
-            {history.length}
+            {isLoading ? "..." : history.length}
           </p>
         </div>
 
         <div className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
           <p className="text-sm text-stone-500">Total XP</p>
           <p className="mt-2 text-2xl font-semibold text-[#24312A]">
-            {totalXp}
+            {isLoading ? "..." : totalXp}
           </p>
         </div>
 
@@ -114,11 +117,17 @@ export default function ArchivePage() {
           </div>
         </div>
 
-        {history.length === 0 ? (
+        {isLoading ? (
           <div className="rounded-2xl bg-[#F7F4EA] p-5">
             <p className="text-sm leading-6 text-stone-600">
-              Ingen oppgaver er arkivert ennå. Fullførte oppgaver flyttes hit
-              automatisk når en ny dag starter.
+              Henter arkivet ...
+            </p>
+          </div>
+        ) : history.length === 0 ? (
+          <div className="rounded-2xl bg-[#F7F4EA] p-5">
+            <p className="text-sm leading-6 text-stone-600">
+              Ingen oppgaver er arkivert ennå. Fullfør en oppgave for å lagre
+              den her.
             </p>
           </div>
         ) : (
@@ -126,10 +135,10 @@ export default function ArchivePage() {
             {history.map((task) => (
               <div
                 key={task.id}
-                className="flex items-center justify-between rounded-2xl bg-[#F7F4EA] p-4"
+                className="flex flex-col gap-3 rounded-2xl bg-[#F7F4EA] p-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="grid h-5 w-5 place-items-center rounded-full bg-[#8EB069] text-xs text-white">
                       ✓
                     </span>
@@ -146,7 +155,9 @@ export default function ArchivePage() {
                   </p>
 
                   <p className="mt-1 text-xs text-stone-400">
-                    {getScopeLabel(task.scope)} · {formatCompletedAt(task.completedAt)}
+                    {getScopeLabel(task.scope)} · Fullført av{" "}
+                    {getUserDisplayName(task.completedBy)} ·{" "}
+                    {formatCompletedAt(task.completedAt)}
                   </p>
                 </div>
 
