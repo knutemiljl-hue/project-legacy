@@ -3,9 +3,9 @@ import { financeItems } from "@/data/dashboard";
 
 export default function FinanceSummary() {
   return (
-    <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-6 shadow-sm ring-1 ring-black/5">
+    <section className="rounded-3xl border border-teal-200 bg-teal-50/90 p-6 shadow-sm ring-1 ring-black/5">
       <div className="mb-5 flex items-start gap-4">
-        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-[#4F773D]">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-teal-100 text-teal-700">
           <WalletCards size={21} strokeWidth={2} />
         </div>
 

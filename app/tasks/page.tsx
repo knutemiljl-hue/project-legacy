@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
+  Archive,
   Check,
   CheckCircle2,
   Circle,
@@ -18,12 +20,14 @@ import {
   Task,
   TaskCategory,
   TaskScope,
+  TaskSubtask,
   deleteTask,
-  formatTaskDate,
+  formatTaskDateRange,
   getDateKey,
   getScopeLabel,
   getTaskCategoryLabel,
   getTodayKey,
+  isTaskOverdue,
   isTaskForToday,
   readTasks,
   subscribeToTasks,
@@ -57,6 +61,35 @@ function CompletedByText({ completedBy }: { completedBy?: string }) {
     <span className="text-xs text-stone-400">
       · Fullført av {getUserDisplayName(completedBy)}
     </span>
+  );
+}
+
+function TaskMetaLine({ task }: { task: Task }) {
+  if (!task.subtitle && !task.createdBy && !task.completedBy) {
+    return null;
+  }
+
+  return (
+    <p className="mt-1 text-sm leading-5 text-stone-500">
+      {task.subtitle}
+      {task.createdBy &&
+        (task.subtitle ? (
+          <CreatedByText createdBy={task.createdBy} />
+        ) : (
+          <span className="text-xs text-stone-400">
+            Lagt til av {getUserDisplayName(task.createdBy)}
+          </span>
+        ))}
+      {task.done &&
+        task.completedBy &&
+        (task.subtitle || task.createdBy ? (
+          <CompletedByText completedBy={task.completedBy} />
+        ) : (
+          <span className="text-xs text-stone-400">
+            Fullført av {getUserDisplayName(task.completedBy)}
+          </span>
+        ))}
+    </p>
   );
 }
 
@@ -108,35 +141,71 @@ function TaskRow({
     task: Task,
     input: {
       title: string;
+      subtitle?: string;
       date?: string;
+      endDate?: string;
       scope: TaskScope;
       category: TaskCategory;
+      subtasks?: TaskSubtask[];
     }
   ) => Promise<void>;
 }) {
-  const formattedDate = formatTaskDate(task.date);
+  const formattedDate = formatTaskDateRange(task.date, task.endDate);
   const isOwnCompletion = task.completedBy === activeUserId;
+  const isOverdue = !task.done && isTaskOverdue(task);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
+  const [editSubtitle, setEditSubtitle] = useState(task.subtitle);
   const [editDate, setEditDate] = useState(task.date ?? "");
+  const [editEndDate, setEditEndDate] = useState(task.endDate ?? "");
   const [editScope, setEditScope] = useState<TaskScope>(task.scope);
   const [editCategory, setEditCategory] = useState<TaskCategory>(task.category);
+  const [editSubtasks, setEditSubtasks] = useState(
+    task.subtasks.map((subtask) => subtask.title).join("\n")
+  );
   const [isSaving, setIsSaving] = useState(false);
+  const completedSubtasks = task.subtasks.filter((subtask) => subtask.done);
 
   function startEditing() {
     setEditTitle(task.title);
+    setEditSubtitle(task.subtitle);
     setEditDate(task.date ?? "");
+    setEditEndDate(task.endDate ?? "");
     setEditScope(task.scope);
     setEditCategory(task.category);
+    setEditSubtasks(task.subtasks.map((subtask) => subtask.title).join("\n"));
     setIsEditing(true);
   }
 
   function cancelEditing() {
     setIsEditing(false);
     setEditTitle(task.title);
+    setEditSubtitle(task.subtitle);
     setEditDate(task.date ?? "");
+    setEditEndDate(task.endDate ?? "");
     setEditScope(task.scope);
     setEditCategory(task.category);
+    setEditSubtasks(task.subtasks.map((subtask) => subtask.title).join("\n"));
+  }
+
+  function buildEditedSubtasks() {
+    const existingByTitle = new Map(
+      task.subtasks.map((subtask) => [subtask.title.trim(), subtask])
+    );
+
+    return editSubtasks
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line, index) => {
+        const existingSubtask = existingByTitle.get(line);
+
+        return {
+          id: existingSubtask?.id ?? `${task.id}-subtask-${index}`,
+          title: line,
+          done: existingSubtask?.done ?? false,
+        };
+      });
   }
 
   async function saveTaskEdit(event: React.FormEvent<HTMLFormElement>) {
@@ -150,9 +219,12 @@ function TaskRow({
 
     await onUpdateTask(task, {
       title: editTitle,
+      subtitle: editSubtitle,
       date: editDate,
+      endDate: editEndDate,
       scope: editScope,
       category: editCategory,
+      subtasks: buildEditedSubtasks(),
     });
 
     setIsSaving(false);
@@ -165,7 +237,7 @@ function TaskRow({
         onSubmit={saveTaskEdit}
         className="flex flex-col gap-4 px-4 py-4"
       >
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,1fr)_170px_150px_180px]">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,1fr)_minmax(180px,0.8fr)_150px_150px_180px]">
           <label className="block">
             <span className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
               Tittel
@@ -180,6 +252,18 @@ function TaskRow({
 
           <label className="block">
             <span className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
+              Beskrivelse
+            </span>
+
+            <input
+              value={editSubtitle}
+              onChange={(event) => setEditSubtitle(event.target.value)}
+              className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F]"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
               Dato
             </span>
 
@@ -187,6 +271,20 @@ function TaskRow({
               type="date"
               value={editDate}
               onChange={(event) => setEditDate(event.target.value)}
+              className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F]"
+            />
+          </label>
+
+          <label className="block">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
+              Slutt
+            </span>
+
+            <input
+              type="date"
+              value={editEndDate}
+              min={editDate}
+              onChange={(event) => setEditEndDate(event.target.value)}
               className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F]"
             />
           </label>
@@ -219,10 +317,23 @@ function TaskRow({
               className="mt-2 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F]"
             >
               <option value="task">Vanlig oppgave</option>
-              <option value="purchase">StÃ¸rre oppgave</option>
+              <option value="purchase">Større oppgave</option>
             </select>
           </label>
         </div>
+
+        <label className="block">
+          <span className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
+            Underpunkter
+          </span>
+
+          <textarea
+            value={editSubtasks}
+            onChange={(event) => setEditSubtasks(event.target.value)}
+            className="mt-2 min-h-24 w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F]"
+            placeholder="Ett underpunkt per linje"
+          />
+        </label>
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
@@ -288,6 +399,12 @@ function TaskRow({
               {getTaskCategoryLabel(task.category)}
             </span>
 
+            {isOverdue && (
+              <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-red-700">
+                Forsinket
+              </span>
+            )}
+
             {task.done && isOwnCompletion && (
               <span className="rounded-full bg-[#F4F8EF] px-2 py-1 text-xs font-semibold text-[#6F8F54]">
                 +{task.xp} XP
@@ -295,11 +412,37 @@ function TaskRow({
             )}
           </div>
 
-          <p className="mt-1 text-sm leading-5 text-stone-500">
-            {task.subtitle}
-            <CreatedByText createdBy={task.createdBy} />
-            {task.done && <CompletedByText completedBy={task.completedBy} />}
-          </p>
+          <TaskMetaLine task={task} />
+
+          {task.subtasks.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {task.subtasks.slice(0, 4).map((subtask) => (
+                <span
+                  key={subtask.id}
+                  className={`rounded-full px-2 py-1 text-xs font-medium ${
+                    subtask.done
+                      ? "bg-[#EEF5E8] text-[#6F8F54]"
+                      : "bg-white text-[#8D846F]"
+                  }`}
+                >
+                  {subtask.done ? "✓ " : ""}
+                  {subtask.title}
+                </span>
+              ))}
+
+              {task.subtasks.length > 4 && (
+                <span className="rounded-full bg-white px-2 py-1 text-xs font-medium text-[#8D846F]">
+                  +{task.subtasks.length - 4}
+                </span>
+              )}
+            </div>
+          )}
+
+          {task.subtasks.length > 0 && (
+            <p className="mt-2 text-xs font-medium text-stone-400">
+              {completedSubtasks.length}/{task.subtasks.length} underpunkter
+            </p>
+          )}
         </div>
       </button>
 
@@ -389,9 +532,12 @@ function TaskSection({
     task: Task,
     input: {
       title: string;
+      subtitle?: string;
       date?: string;
+      endDate?: string;
       scope: TaskScope;
       category: TaskCategory;
+      subtasks?: TaskSubtask[];
     }
   ) => Promise<void>;
 }) {
@@ -524,9 +670,12 @@ export default function TasksBoard() {
     task: Task,
     input: {
       title: string;
+      subtitle?: string;
       date?: string;
+      endDate?: string;
       scope: TaskScope;
       category: TaskCategory;
+      subtasks?: TaskSubtask[];
     }
   ) {
     const nextTitle = input.title.trim();
@@ -541,9 +690,12 @@ export default function TasksBoard() {
           ? {
               ...currentTask,
               title: nextTitle,
+              subtitle: input.subtitle?.trim() || currentTask.subtitle,
               date: input.date || undefined,
+              endDate: input.endDate || undefined,
               scope: input.scope,
               category: input.category,
+              subtasks: input.subtasks ?? currentTask.subtasks,
             }
           : currentTask
       )
@@ -563,6 +715,10 @@ export default function TasksBoard() {
   const regularTasks = visibleTasks.filter((task) => task.category === "task");
   const largeTasks = visibleTasks.filter(
     (task) => task.category === "purchase"
+  );
+
+  const overdueOpenTasks = sortTasksByDateAndTime(
+    regularTasks.filter((task) => isTaskOverdue(task) && !task.done)
   );
 
   const todaysOpenTasks = sortTasksByDateAndTime(
@@ -615,7 +771,14 @@ export default function TasksBoard() {
             </p>
           </div>
 
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-5 lg:grid-cols-6">
+            <div className="rounded-2xl bg-[#F7F4EA] px-4 py-3 text-center">
+              <p className="text-xs text-stone-500">Forsinket</p>
+              <p className="mt-1 text-xl font-semibold text-[#24312A]">
+                {isLoading ? "–" : overdueOpenTasks.length}
+              </p>
+            </div>
+
             <div className="rounded-2xl bg-[#F7F4EA] px-4 py-3 text-center">
               <p className="text-xs text-stone-500">I dag</p>
               <p className="mt-1 text-xl font-semibold text-[#24312A]">
@@ -643,9 +806,29 @@ export default function TasksBoard() {
                 {isLoading ? "–" : earnedXpToday}
               </p>
             </div>
+
+            <Link
+              href="/archive"
+              className="col-span-2 flex items-center justify-center gap-2 rounded-2xl bg-[#F7F4EA] px-4 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95 sm:col-span-5 lg:col-span-1"
+            >
+              <Archive size={16} strokeWidth={2.25} />
+              Arkiv
+            </Link>
           </div>
         </div>
       </section>
+
+      <TaskSection
+        title="Forsinket"
+        description="Vanlige oppgaver med forfallsdato før i dag. De blir liggende til de fullføres, slettes eller arkiveres."
+        tasks={overdueOpenTasks}
+        activeUserId={activeUserId}
+        emptyText="Ingen forsinkede oppgaver."
+        icon={<Clock size={21} strokeWidth={2} />}
+        onToggleTask={handleToggleTask}
+        onDeleteTask={handleDeleteTask}
+        onUpdateTask={handleUpdateTask}
+      />
 
       <TaskSection
         title="I dag"

@@ -110,7 +110,6 @@ function formatCompletedTime(completedAt: string) {
 }
 
 export default function CharacterSummary() {
-  const [activeUserId, setActiveUserId] = useState<LegacyUserId>("knut");
   const [summary, setSummary] = useState<XpSummary>({
     totalXp: 0,
     todayXp: 0,
@@ -126,8 +125,17 @@ export default function CharacterSummary() {
   const levelTitle = getLevelTitle(level);
   const hasReachedMaxLevel = level >= MAX_LEVEL;
 
+  async function updateActiveUserAndXp() {
+    const activeUser = readActiveUser();
+    const nextSummary = await readXpSummary(activeUser.id);
+
+    setSummary(nextSummary);
+  }
+
   useEffect(() => {
-    updateActiveUserAndXp();
+    const initialLoadTimer = window.setTimeout(() => {
+      updateActiveUserAndXp();
+    }, 0);
 
     const unsubscribeFromTasks = subscribeToTasks(updateActiveUserAndXp);
 
@@ -143,6 +151,7 @@ export default function CharacterSummary() {
     window.addEventListener("focus", updateActiveUserAndXp);
 
     return () => {
+      window.clearTimeout(initialLoadTimer);
       unsubscribeFromTasks();
       window.removeEventListener(
         "project-legacy-active-user-updated",
@@ -160,21 +169,11 @@ export default function CharacterSummary() {
     };
   }, []);
 
-  async function updateActiveUserAndXp() {
-    const activeUser = readActiveUser();
-
-    setActiveUserId(activeUser.id);
-
-    const nextSummary = await readXpSummary(activeUser.id);
-
-    setSummary(nextSummary);
-  }
-
   return (
-    <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-5 shadow-sm ring-1 ring-black/5">
+    <section className="rounded-3xl border border-[#E6D59A] bg-[#FFF8DF] p-5 shadow-sm ring-1 ring-black/5">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-[#4F773D]">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F3E3A3] text-[#8D6D1F]">
             <Sparkles size={21} strokeWidth={2} />
           </div>
 
@@ -191,7 +190,7 @@ export default function CharacterSummary() {
           </div>
         </div>
 
-        <div className="rounded-2xl bg-[#F7F4EA] px-4 py-3 text-right">
+        <div className="rounded-2xl bg-white/80 px-4 py-3 text-right">
           <p className="text-xs text-stone-500">Total XP</p>
           <p className="text-lg font-semibold text-[#24312A]">
             {summary.totalXp}

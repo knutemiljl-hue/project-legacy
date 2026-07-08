@@ -9,10 +9,13 @@ import InlineTaskEditor, {
 import {
   ArchivedTask,
   Task,
-  formatTaskDate,
+  formatTaskDateRange,
   getDateKey,
   getTodayKey,
+  isRegularTask,
+  isTaskDueTodayOrOverdue,
   isTaskForToday,
+  isTaskOverdue,
   readArchivedTasks,
   readTasks,
   subscribeToTasks,
@@ -94,7 +97,11 @@ export default function FamilyTasksSummary() {
       readArchivedTasks(),
     ]);
 
-    setFamilyTasks(nextTasks.filter((task) => task.scope === "family"));
+    setFamilyTasks(
+      nextTasks
+        .filter((task) => task.scope === "family")
+        .filter(isRegularTask)
+    );
     setHistory(nextHistory.filter((task) => task.scope === "family"));
     setIsLoading(false);
   }
@@ -134,9 +141,12 @@ export default function FamilyTasksSummary() {
           ? {
               ...currentTask,
               title: nextTitle,
+              subtitle: input.subtitle?.trim() || currentTask.subtitle,
               date: input.date || undefined,
+              endDate: input.endDate || undefined,
               scope: input.scope,
               category: input.category,
+              subtasks: input.subtasks ?? currentTask.subtasks,
             }
           : currentTask
       )
@@ -150,8 +160,11 @@ export default function FamilyTasksSummary() {
   }
 
   const todaysFamilyTasks = familyTasks.filter((task) => isTaskForToday(task));
+  const activeFamilyTasks = familyTasks.filter((task) =>
+    isTaskDueTodayOrOverdue(task)
+  );
 
-  const openFamilyTasks = todaysFamilyTasks.filter((task) => !task.done);
+  const openFamilyTasks = activeFamilyTasks.filter((task) => !task.done);
 
   const completedFamilyTasksToday = todaysFamilyTasks.filter((task) => {
     if (!task.done || !task.completedAt) {
@@ -206,7 +219,7 @@ export default function FamilyTasksSummary() {
 
       <div className="mb-5 grid grid-cols-3 gap-3">
         <div className="rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA] p-4">
-          <p className="text-xs text-stone-500">Åpne i dag</p>
+          <p className="text-xs text-stone-500">Åpne nå</p>
           <p className="mt-1 text-xl font-semibold text-[#24312A]">
             {isLoading ? "–" : openFamilyTasks.length}
           </p>
@@ -230,7 +243,7 @@ export default function FamilyTasksSummary() {
       <div>
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
-            Åpne i dag
+            Åpne nå
           </h3>
 
           <Link
@@ -256,8 +269,9 @@ export default function FamilyTasksSummary() {
         ) : (
           <div className="overflow-hidden rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA]">
             {openFamilyTasks.map((task, index) => {
-              const formattedDate = formatTaskDate(task.date);
+              const formattedDate = formatTaskDateRange(task.date, task.endDate);
               const isEditing = editingTaskId === task.id;
+              const isOverdue = isTaskOverdue(task);
 
               return (
                 <div
@@ -291,9 +305,17 @@ export default function FamilyTasksSummary() {
                         </span>
 
                         <div className="min-w-0">
-                          <p className="font-medium text-[#24312A]">
-                            {task.title}
-                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-medium text-[#24312A]">
+                              {task.title}
+                            </p>
+
+                            {isOverdue && (
+                              <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-red-700">
+                                Forsinket
+                              </span>
+                            )}
+                          </div>
 
                           <p className="mt-1 text-sm leading-5 text-stone-500">
                             {task.subtitle}

@@ -525,10 +525,10 @@ export default function FamilyCalendar({
       : formatCalendarMonth(visibleMonth);
 
   return (
-    <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-4 shadow-sm ring-1 ring-black/5 sm:p-6">
+    <section className="rounded-3xl border border-sky-200 bg-sky-50/90 p-4 shadow-sm ring-1 ring-black/5 sm:p-6">
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-[#4F773D]">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-sky-100 text-sky-700">
             <CalendarDays size={21} strokeWidth={2} />
           </div>
 
@@ -550,7 +550,7 @@ export default function FamilyCalendar({
           </div>
         </div>
 
-        <div className="w-fit rounded-2xl bg-[#F7F4EA] px-4 py-3 text-left sm:text-right">
+        <div className="w-fit rounded-2xl bg-white/80 px-4 py-3 text-left sm:text-right">
           <p className="text-xs text-stone-500">Neste 7 dager</p>
           <p className="text-lg font-semibold text-[#24312A]">
             {upcomingEvents.length}

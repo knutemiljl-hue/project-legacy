@@ -112,6 +112,13 @@ const calendarRecurrenceOptions: CalendarRecurrenceFrequency[] = [
   "monthly",
 ];
 
+function parseSubtaskInput(input: string) {
+  return input
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
 function getActionToneClasses(tone: "green" | "gold" | "blue" | "stone") {
   const classes = {
     green: {
@@ -202,15 +209,16 @@ function SecondaryActionCard({
 
 export default function QuickAddMenu() {
   const [isOpen, setIsOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
   const [activeAction, setActiveAction] = useState<QuickActionId | null>(null);
 
   const [taskTitle, setTaskTitle] = useState("");
   const [taskSubtitle, setTaskSubtitle] = useState("");
   const [taskDate, setTaskDate] = useState(getLocalDateKey());
+  const [taskEndDate, setTaskEndDate] = useState("");
   const [taskTime, setTaskTime] = useState("");
   const [taskScope, setTaskScope] = useState<"personal" | "family">("personal");
   const [taskCategory, setTaskCategory] = useState<TaskCategory>("task");
+  const [taskSubtasksInput, setTaskSubtasksInput] = useState("");
   const [taskRecurrenceFrequency, setTaskRecurrenceFrequency] =
     useState<RecurrenceFrequency>("none");
   const [taskRecurrenceUntil, setTaskRecurrenceUntil] = useState("");
@@ -230,10 +238,6 @@ export default function QuickAddMenu() {
   const [calendarRecurrenceUntil, setCalendarRecurrenceUntil] = useState("");
 
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
     if (!isOpen) {
       return;
     }
@@ -251,9 +255,11 @@ export default function QuickAddMenu() {
     setTaskTitle("");
     setTaskSubtitle("");
     setTaskDate(getLocalDateKey());
+    setTaskEndDate("");
     setTaskTime("");
     setTaskScope("personal");
     setTaskCategory("task");
+    setTaskSubtasksInput("");
     setTaskRecurrenceFrequency("none");
     setTaskRecurrenceUntil("");
 
@@ -299,9 +305,11 @@ export default function QuickAddMenu() {
       title: taskTitle,
       subtitle: taskSubtitle,
       date: taskDate,
+      endDate: taskEndDate,
       time: taskTime,
       scope: taskScope,
       category: taskCategory,
+      subtasks: parseSubtaskInput(taskSubtasksInput),
       recurrenceFrequency: taskRecurrenceFrequency,
       recurrenceUntil: taskRecurrenceUntil,
     });
@@ -367,7 +375,7 @@ export default function QuickAddMenu() {
               : "Velg hva du vil opprette i Project Legacy.";
 
   const modal =
-    isOpen && isMounted
+    isOpen && typeof document !== "undefined"
       ? createPortal(
           <div
             onPointerUp={closeModal}
@@ -522,7 +530,7 @@ export default function QuickAddMenu() {
                       />
                     </label>
 
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                       <label className="block">
                         <span className="text-sm font-medium text-[#24312A]">
                           Første dato
@@ -532,6 +540,22 @@ export default function QuickAddMenu() {
                           type="date"
                           value={taskDate}
                           onChange={(event) => setTaskDate(event.target.value)}
+                          className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition focus:border-[#8D846F] sm:text-sm"
+                        />
+                      </label>
+
+                      <label className="block">
+                        <span className="text-sm font-medium text-[#24312A]">
+                          Sluttdato
+                        </span>
+
+                        <input
+                          type="date"
+                          value={taskEndDate}
+                          min={taskDate}
+                          onChange={(event) =>
+                            setTaskEndDate(event.target.value)
+                          }
                           className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition focus:border-[#8D846F] sm:text-sm"
                         />
                       </label>
@@ -549,6 +573,25 @@ export default function QuickAddMenu() {
                         />
                       </label>
                     </div>
+
+                    <label className="block">
+                      <span className="text-sm font-medium text-[#24312A]">
+                        Underpunkter
+                      </span>
+
+                      <textarea
+                        value={taskSubtasksInput}
+                        onChange={(event) =>
+                          setTaskSubtasksInput(event.target.value)
+                        }
+                        className="mt-2 min-h-28 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition placeholder:text-stone-400 focus:border-[#8D846F] sm:text-sm"
+                        placeholder={
+                          isPurchaseFlow
+                            ? "F.eks.\nMåle rommet\nSjekke pris\nBestille"
+                            : "F.eks.\nRing\nSend skjema\nFølg opp"
+                        }
+                      />
+                    </label>
 
                     <div>
                       <span className="text-sm font-medium text-[#24312A]">

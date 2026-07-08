@@ -13,7 +13,7 @@ import {
   Task,
   isPurchaseTask,
   isRegularTask,
-  isTaskForToday,
+  isTaskDueTodayOrOverdue,
   readTasks,
   subscribeToTasks,
 } from "@/lib/tasks";
@@ -80,14 +80,35 @@ function StatusChip({
   label,
   value,
   icon,
+  tone,
 }: {
   label: string;
   value: string;
   icon: React.ReactNode;
+  tone: "tasks" | "calendar" | "large";
 }) {
+  const toneClasses = {
+    tasks: {
+      shell: "border-[#CFE4C5] bg-[#F3FAF1]",
+      icon: "bg-[#E2F1D8] text-[#3F6F35]",
+    },
+    calendar: {
+      shell: "border-sky-200 bg-sky-50",
+      icon: "bg-sky-100 text-sky-700",
+    },
+    large: {
+      shell: "border-[#D9C7E8] bg-[#F7F1FB]",
+      icon: "bg-[#EADCF5] text-[#6F4D8B]",
+    },
+  }[tone];
+
   return (
-    <div className="flex min-w-0 items-center gap-2 rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA] px-3 py-3 shadow-sm sm:px-4">
-      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-[#4F773D] shadow-sm">
+    <div
+      className={`flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-3 shadow-sm sm:px-4 ${toneClasses.shell}`}
+    >
+      <div
+        className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl shadow-sm ${toneClasses.icon}`}
+      >
         {icon}
       </div>
 
@@ -113,39 +134,6 @@ export default function UserGreeting() {
     largeTasks: 0,
   });
 
-  useEffect(() => {
-    updateDashboard();
-
-    const unsubscribeFromTasks = subscribeToTasks(updateDashboard);
-    const unsubscribeFromCalendar = subscribeToCalendarEvents(updateDashboard);
-
-    window.addEventListener(
-      "project-legacy-active-user-updated",
-      updateDashboard
-    );
-    window.addEventListener("project-legacy-tasks-updated", updateDashboard);
-    window.addEventListener("project-legacy-calendar-updated", updateDashboard);
-    window.addEventListener("storage", updateDashboard);
-    window.addEventListener("focus", updateDashboard);
-
-    return () => {
-      unsubscribeFromTasks();
-      unsubscribeFromCalendar();
-
-      window.removeEventListener(
-        "project-legacy-active-user-updated",
-        updateDashboard
-      );
-      window.removeEventListener("project-legacy-tasks-updated", updateDashboard);
-      window.removeEventListener(
-        "project-legacy-calendar-updated",
-        updateDashboard
-      );
-      window.removeEventListener("storage", updateDashboard);
-      window.removeEventListener("focus", updateDashboard);
-    };
-  }, []);
-
   async function updateDashboard() {
     const nextActiveUser = readActiveUser();
 
@@ -163,7 +151,7 @@ export default function UserGreeting() {
 
     const todayTasks = visibleTasks
       .filter(isRegularTask)
-      .filter(isTaskForToday)
+      .filter(isTaskDueTodayOrOverdue)
       .filter((task) => !task.done).length;
 
     const largeTasks = visibleTasks
@@ -176,6 +164,42 @@ export default function UserGreeting() {
       largeTasks,
     });
   }
+
+  useEffect(() => {
+    const initialLoadTimer = window.setTimeout(() => {
+      updateDashboard();
+    }, 0);
+
+    const unsubscribeFromTasks = subscribeToTasks(updateDashboard);
+    const unsubscribeFromCalendar = subscribeToCalendarEvents(updateDashboard);
+
+    window.addEventListener(
+      "project-legacy-active-user-updated",
+      updateDashboard
+    );
+    window.addEventListener("project-legacy-tasks-updated", updateDashboard);
+    window.addEventListener("project-legacy-calendar-updated", updateDashboard);
+    window.addEventListener("storage", updateDashboard);
+    window.addEventListener("focus", updateDashboard);
+
+    return () => {
+      window.clearTimeout(initialLoadTimer);
+      unsubscribeFromTasks();
+      unsubscribeFromCalendar();
+
+      window.removeEventListener(
+        "project-legacy-active-user-updated",
+        updateDashboard
+      );
+      window.removeEventListener("project-legacy-tasks-updated", updateDashboard);
+      window.removeEventListener(
+        "project-legacy-calendar-updated",
+        updateDashboard
+      );
+      window.removeEventListener("storage", updateDashboard);
+      window.removeEventListener("focus", updateDashboard);
+    };
+  }, []);
 
   return (
     <section className="overflow-hidden rounded-[2rem] border border-[#E2D8C7] bg-white/85 p-5 shadow-sm ring-1 ring-black/5 sm:rounded-[2.5rem] sm:p-7">
@@ -213,18 +237,21 @@ export default function UserGreeting() {
             label="I dag"
             value={`${stats.todayTasks} åpne`}
             icon={<CheckCircle2 size={18} strokeWidth={2.25} />}
+            tone="tasks"
           />
 
           <StatusChip
             label="Neste 7 dager"
             value={`${stats.upcomingEvents} avtaler`}
             icon={<CalendarDays size={18} strokeWidth={2.25} />}
+            tone="calendar"
           />
 
           <StatusChip
             label="Store ting"
             value={`${stats.largeTasks} åpne`}
             icon={<ShoppingBag size={18} strokeWidth={2.25} />}
+            tone="large"
           />
         </div>
       </div>

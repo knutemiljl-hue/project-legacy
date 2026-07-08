@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
-  Archive,
   Check,
   CheckCircle2,
   Circle,
@@ -15,15 +14,15 @@ import InlineTaskEditor, {
   TaskEditInput,
 } from "@/components/tasks/InlineTaskEditor";
 import {
-  ArchivedTask,
   Task,
   deleteTask,
-  formatTaskDate,
+  formatTaskDateRange,
   getDateKey,
   getScopeLabel,
   getTodayKey,
-  isTaskForToday,
-  readArchivedTasks,
+  isRegularTask,
+  isTaskDueTodayOrOverdue,
+  isTaskOverdue,
   readTasks,
   subscribeToTasks,
   toggleTaskCompleted,
@@ -44,6 +43,26 @@ function CreatedByText({ createdBy }: { createdBy?: string }) {
     <span className="text-xs text-stone-400">
       · Lagt til av {getUserDisplayName(createdBy)}
     </span>
+  );
+}
+
+function TaskMetaLine({ task }: { task: Task }) {
+  if (!task.subtitle && !task.createdBy) {
+    return null;
+  }
+
+  return (
+    <p className="mt-1 text-sm leading-5 text-stone-500">
+      {task.subtitle}
+      {task.createdBy &&
+        (task.subtitle ? (
+          <CreatedByText createdBy={task.createdBy} />
+        ) : (
+          <span className="text-xs text-stone-400">
+            Lagt til av {getUserDisplayName(task.createdBy)}
+          </span>
+        ))}
+    </p>
   );
 }
 
@@ -85,7 +104,9 @@ function TaskList({
   onUpdateTask: (task: Task, input: TaskEditInput) => Promise<void>;
 }) {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
-  const visibleTasks = tasks.filter((task) => isTaskForToday(task) && !task.done);
+  const visibleTasks = tasks.filter(
+    (task) => isTaskDueTodayOrOverdue(task) && !task.done
+  );
 
   return (
     <div>
@@ -104,13 +125,16 @@ function TaskList({
       ) : (
         <div className="overflow-hidden rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA]">
           {visibleTasks.map((task, index) => {
-            const formattedDate = formatTaskDate(task.date);
+            const formattedDate = formatTaskDateRange(task.date, task.endDate);
             const isEditing = editingTaskId === task.id;
+            const isOverdue = isTaskOverdue(task);
 
             return (
               <div
                 key={task.id}
-                className={`flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between ${
+                className={`${
+                  index >= 3 ? "hidden sm:flex" : "flex"
+                } flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between ${
                   index !== visibleTasks.length - 1
                     ? "border-b border-[#ECE3D4]"
                     : ""
@@ -139,14 +163,19 @@ function TaskList({
                       </span>
 
                       <div className="min-w-0">
-                        <p className="font-medium text-[#24312A]">
-                          {task.title}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-medium text-[#24312A]">
+                            {task.title}
+                          </p>
 
-                        <p className="mt-1 text-sm leading-5 text-stone-500">
-                          {task.subtitle}
-                          <CreatedByText createdBy={task.createdBy} />
-                        </p>
+                          {isOverdue && (
+                            <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-red-700">
+                              Forsinket
+                            </span>
+                          )}
+                        </div>
+
+                        <TaskMetaLine task={task} />
                       </div>
                     </button>
 
@@ -188,6 +217,15 @@ function TaskList({
           })}
         </div>
       )}
+
+      {visibleTasks.length > 3 && (
+        <Link
+          href="/tasks"
+          className="mt-3 flex items-center justify-center rounded-2xl bg-[#F7F4EA] px-4 py-3 text-sm font-medium text-[#24312A] transition hover:brightness-95 sm:hidden"
+        >
+          Se alle {visibleTasks.length} oppgaver
+        </Link>
+      )}
     </div>
   );
 }
@@ -208,7 +246,11 @@ function CompletedTasks({
   const earnedXp = ownCompletedTasks.reduce((sum, task) => sum + task.xp, 0);
 
   return (
-    <div className="rounded-3xl border border-[#DDE8D4] bg-[#F4F8EF] p-4 sm:p-5">
+    <div
+      className={`rounded-3xl border border-[#DDE8D4] bg-[#F4F8EF] p-4 sm:p-5 ${
+        tasks.length === 0 ? "hidden sm:block" : ""
+      }`}
+    >
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-[#6F8F54]">
@@ -242,7 +284,7 @@ function CompletedTasks({
       ) : (
         <div className="overflow-hidden rounded-2xl bg-white/70">
           {tasks.map((task, index) => {
-            const formattedDate = formatTaskDate(task.date);
+            const formattedDate = formatTaskDateRange(task.date, task.endDate);
             const isOwnCompletion = task.completedBy === activeUserId;
 
             return (
@@ -295,47 +337,8 @@ function CompletedTasks({
   );
 }
 
-function TaskHistorySummary({ history }: { history: ArchivedTask[] }) {
-  const totalXp = history.reduce((sum, task) => sum + task.xp, 0);
-
-  return (
-    <Link
-      href="/archive"
-      className="flex items-center justify-between gap-3 rounded-2xl border border-[#ECE3D4] bg-[#F7F4EA] px-4 py-3 transition hover:brightness-95 sm:rounded-3xl sm:px-5 sm:py-4"
-    >
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-2xl bg-white text-[#4F773D] sm:h-9 sm:w-9">
-          <Archive size={16} strokeWidth={2} />
-        </div>
-
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#8D846F]">
-            Arkiv
-          </p>
-
-          <p className="mt-0.5 truncate text-xs text-stone-500 sm:text-sm">
-            {history.length === 0
-              ? "Ingen arkiverte oppgaver"
-              : `${history.length} arkiverte oppgaver`}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex shrink-0 items-center gap-2">
-        <div className="hidden rounded-2xl bg-white px-4 py-2 text-right sm:block">
-          <p className="text-xs text-stone-500">XP</p>
-          <p className="text-sm font-semibold text-[#24312A]">{totalXp}</p>
-        </div>
-
-        <p className="text-sm font-medium text-[#24312A]">Åpne →</p>
-      </div>
-    </Link>
-  );
-}
-
 export default function DailyTasks() {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [taskHistory, setTaskHistory] = useState<ArchivedTask[]>([]);
   const [activeUserId, setActiveUserId] = useState<LegacyUserId>("knut");
   const [isLoading, setIsLoading] = useState(true);
 
@@ -343,13 +346,17 @@ export default function DailyTasks() {
     isVisibleForActiveUser(task, activeUserId)
   );
 
-  const todayTasks = visibleTasksForUser.filter((task) => isTaskForToday(task));
+  const regularTasksForUser = visibleTasksForUser.filter(isRegularTask);
 
-  const personalTasks = visibleTasksForUser.filter(
+  const todayTasks = regularTasksForUser.filter((task) =>
+    isTaskDueTodayOrOverdue(task)
+  );
+
+  const personalTasks = regularTasksForUser.filter(
     (task) => task.scope === "personal"
   );
 
-  const familyTasks = visibleTasksForUser.filter(
+  const familyTasks = regularTasksForUser.filter(
     (task) => task.scope === "family"
   );
 
@@ -403,13 +410,9 @@ export default function DailyTasks() {
   async function loadData() {
     setIsLoading(true);
 
-    const [nextTasks, nextHistory] = await Promise.all([
-      readTasks(),
-      readArchivedTasks(),
-    ]);
+    const nextTasks = await readTasks();
 
     setTasks(nextTasks);
-    setTaskHistory(nextHistory);
     setIsLoading(false);
   }
 
@@ -457,9 +460,12 @@ export default function DailyTasks() {
           ? {
               ...currentTask,
               title: nextTitle,
+              subtitle: input.subtitle?.trim() || currentTask.subtitle,
               date: input.date || undefined,
+              endDate: input.endDate || undefined,
               scope: input.scope,
               category: input.category,
+              subtasks: input.subtasks ?? currentTask.subtasks,
             }
           : currentTask
       )
@@ -473,10 +479,10 @@ export default function DailyTasks() {
   }
 
   return (
-    <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-4 shadow-sm ring-1 ring-black/5 sm:p-6">
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <section className="rounded-3xl border border-[#CFE4C5] bg-[#F3FAF1] p-4 shadow-sm ring-1 ring-black/5 sm:p-6">
+      <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-[#4F773D]">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#E2F1D8] text-[#3F6F35]">
             <CheckCircle2 size={21} strokeWidth={2} />
           </div>
 
@@ -493,12 +499,12 @@ export default function DailyTasks() {
           </div>
         </div>
 
-        <div className="ml-15 text-left sm:ml-0 sm:text-right">
+        <div className="ml-15 flex items-center gap-3 sm:ml-0 sm:block sm:text-right">
           <p className="text-sm text-stone-500">
             {completedByActiveUserToday.length} fullført av deg i dag
           </p>
 
-          <p className="mt-1 text-sm font-semibold text-[#6F8F54]">
+          <p className="text-sm font-semibold text-[#6F8F54] sm:mt-1">
             +{earnedXpToday} XP
           </p>
         </div>
@@ -526,8 +532,6 @@ export default function DailyTasks() {
           activeUserId={activeUserId}
           onUndoTask={handleToggleTask}
         />
-
-        <TaskHistorySummary history={taskHistory} />
       </div>
     </section>
   );

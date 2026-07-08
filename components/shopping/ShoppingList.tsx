@@ -59,15 +59,21 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
   }
 
   async function toggleItem(item: ShoppingItem) {
+    const nextCompleted = !item.completed;
+
     const nextItems = items.map((currentItem) =>
       currentItem.id === item.id
-        ? { ...currentItem, completed: !currentItem.completed }
+        ? {
+            ...currentItem,
+            completed: nextCompleted,
+            completedAt: nextCompleted ? new Date().toISOString() : undefined,
+          }
         : currentItem
     );
 
     setItems(nextItems);
 
-    await updateShoppingItemCompleted(item.id, !item.completed);
+    await updateShoppingItemCompleted(item.id, nextCompleted);
   }
 
   async function removeItem(itemId: string) {
@@ -112,10 +118,10 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
   const completedItems = items.filter((item) => item.completed);
 
   return (
-    <section className="rounded-3xl border border-[#E2D8C7] bg-white/85 p-6 shadow-sm ring-1 ring-black/5">
+    <section className="rounded-3xl border border-[#E8D58C] bg-[#FFF9E7] p-6 shadow-sm ring-1 ring-black/5">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F7F4EA] text-[#4F773D]">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#FFF0B8] text-[#8D6D1F]">
             <ShoppingBasket size={21} strokeWidth={2} />
           </div>
 
@@ -136,7 +142,7 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
           </div>
         </div>
 
-        <div className="rounded-2xl bg-[#F7F4EA] px-4 py-3 text-right">
+        <div className="rounded-2xl bg-white/80 px-4 py-3 text-right">
           <p className="text-xs text-stone-500">Gjenstår</p>
           <p className="text-lg font-semibold text-[#24312A]">
             {openItems.length}

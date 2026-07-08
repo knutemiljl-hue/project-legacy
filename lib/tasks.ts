@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+﻿import { supabase } from "@/lib/supabase";
 import { LegacyUserId, readActiveUser } from "@/lib/users";
 
 export const XP_PER_TASK = 5;
@@ -9,14 +9,22 @@ export type TaskScope = "personal" | "family";
 export type TaskCategory = "task" | "purchase";
 export type RecurrenceFrequency = "none" | "weekly" | "biweekly" | "monthly";
 
+export type TaskSubtask = {
+  id: string;
+  title: string;
+  done: boolean;
+};
+
 export type Task = {
   id: string;
   title: string;
   subtitle: string;
   date?: string;
+  endDate?: string;
   time: string;
   scope: TaskScope;
   category: TaskCategory;
+  subtasks: TaskSubtask[];
   done: boolean;
   isCustom: boolean;
   createdBy?: LegacyUserId;
@@ -38,9 +46,11 @@ export type ArchivedTask = {
   title: string;
   subtitle: string;
   date?: string;
+  endDate?: string;
   time: string;
   scope: TaskScope;
   category: TaskCategory;
+  subtasks: TaskSubtask[];
   completedAt: string;
   xp: number;
   createdBy?: LegacyUserId;
@@ -59,9 +69,11 @@ export type TaskInput = {
   title: string;
   subtitle?: string;
   date?: string;
+  endDate?: string;
   time?: string;
   scope: TaskScope;
   category?: TaskCategory;
+  subtasks?: Array<string | TaskSubtask>;
 };
 
 export type RecurringTaskInput = TaskInput & {
@@ -71,9 +83,12 @@ export type RecurringTaskInput = TaskInput & {
 
 export type TaskUpdateInput = {
   title: string;
+  subtitle?: string;
   date?: string;
+  endDate?: string;
   scope: TaskScope;
   category: TaskCategory;
+  subtasks?: Array<string | TaskSubtask>;
 };
 
 type TaskRow = {
@@ -94,15 +109,122 @@ type TaskRow = {
   created_at: string;
 };
 
+const TASK_DETAILS_PREFIX = "__legacy_task_details_v1__:";
+
+type EncodedTaskDetails = {
+  description?: string;
+  endDate?: string;
+  subtasks?: TaskSubtask[];
+};
+
+function createTaskSubtaskId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `subtask-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function normalizeTaskSubtasks(
+  subtasks?: Array<string | TaskSubtask>
+): TaskSubtask[] {
+  return (subtasks ?? [])
+    .map((subtask) => {
+      if (typeof subtask === "string") {
+        return {
+          id: createTaskSubtaskId(),
+          title: subtask.trim(),
+          done: false,
+        };
+      }
+
+      return {
+        id: subtask.id || createTaskSubtaskId(),
+        title: subtask.title.trim(),
+        done: subtask.done,
+      };
+    })
+    .filter((subtask) => subtask.title.length > 0);
+}
+
+function parseTaskDetails(subtitle: string | null): EncodedTaskDetails {
+  if (!subtitle) {
+    return {};
+  }
+
+  if (!subtitle.startsWith(TASK_DETAILS_PREFIX)) {
+    return { description: subtitle };
+  }
+
+  try {
+    const details = JSON.parse(
+      subtitle.slice(TASK_DETAILS_PREFIX.length)
+    ) as EncodedTaskDetails;
+
+    return {
+      description: details.description,
+      endDate: details.endDate,
+      subtasks: normalizeTaskSubtasks(details.subtasks),
+    };
+  } catch (error) {
+    console.error("Kunne ikke lese oppgavedetaljer:", error);
+    return { description: subtitle };
+  }
+}
+
+function encodeTaskDetails({
+  description,
+  endDate,
+  subtasks,
+}: {
+  description?: string;
+  endDate?: string;
+  subtasks?: Array<string | TaskSubtask>;
+}) {
+  const nextDescription = description?.trim() ?? "";
+  const normalizedSubtasks = normalizeTaskSubtasks(subtasks);
+  const nextEndDate = endDate || undefined;
+
+  if (!nextEndDate && normalizedSubtasks.length === 0) {
+    return nextDescription || null;
+  }
+
+  return `${TASK_DETAILS_PREFIX}${JSON.stringify({
+    description: nextDescription,
+    endDate: nextEndDate,
+    subtasks: normalizedSubtasks,
+  })}`;
+}
+
+function normalizeTaskSubtitle(description: string | undefined, category: TaskCategory) {
+  const trimmedDescription = description?.trim() ?? "";
+
+  if (category === "task" && trimmedDescription === "Egendefinert oppgave") {
+    return "";
+  }
+
+  if (category === "task") {
+    return trimmedDescription;
+  }
+
+  return trimmedDescription || "Større oppgave";
+}
+
 function mapTask(row: TaskRow): Task {
+  const details = parseTaskDetails(row.subtitle);
+  const category = row.task_category ?? "task";
+  const subtitle = normalizeTaskSubtitle(details.description, category);
+
   return {
     id: row.id,
     title: row.title,
-    subtitle: row.subtitle || "Egendefinert oppgave",
+    subtitle,
     date: row.task_date ?? undefined,
+    endDate: details.endDate,
     time: row.task_time || "Hele dagen",
     scope: row.scope,
-    category: row.task_category ?? "task",
+    category,
+    subtasks: details.subtasks ?? [],
     done: row.is_done,
     isCustom: true,
     createdBy: row.created_by ?? undefined,
@@ -150,12 +272,29 @@ export function getTodayKey() {
   return getLocalDateKey();
 }
 
-export function isTaskForToday(task: Pick<Task, "date">) {
+export function isTaskForToday(task: Pick<Task, "date" | "endDate">) {
   if (!task.date) {
     return true;
   }
 
-  return task.date === getTodayKey();
+  const today = getTodayKey();
+  const endDate = task.endDate && task.endDate > task.date ? task.endDate : task.date;
+
+  return task.date <= today && endDate >= today;
+}
+
+export function isTaskOverdue(task: Pick<Task, "date" | "endDate">) {
+  if (!task.date) {
+    return false;
+  }
+
+  const endDate = task.endDate && task.endDate > task.date ? task.endDate : task.date;
+
+  return endDate < getTodayKey();
+}
+
+export function isTaskDueTodayOrOverdue(task: Pick<Task, "date" | "endDate">) {
+  return isTaskForToday(task) || isTaskOverdue(task);
 }
 
 export function isRegularTask(task: Pick<Task, "category">) {
@@ -179,6 +318,35 @@ export function formatTaskDate(date?: string) {
     day: "numeric",
     month: "short",
   }).format(localDate);
+}
+
+function formatShortDateKey(date: string, includeYear = false) {
+  const [year, month, day] = date.split("-").map(Number);
+  const localDate = new Date(year, month - 1, day);
+
+  return new Intl.DateTimeFormat("nb-NO", {
+    day: "numeric",
+    month: "short",
+    year: includeYear ? "numeric" : undefined,
+  }).format(localDate);
+}
+
+export function formatTaskDateRange(date?: string, endDate?: string) {
+  if (!date) {
+    return null;
+  }
+
+  if (!endDate || endDate <= date) {
+    return formatTaskDate(date);
+  }
+
+  const startYear = date.slice(0, 4);
+  const endYear = endDate.slice(0, 4);
+
+  return `${formatShortDateKey(date, startYear !== endYear)} - ${formatShortDateKey(
+    endDate,
+    startYear !== endYear
+  )}`;
 }
 
 export function getScopeLabel(scope: TaskScope) {
@@ -264,7 +432,7 @@ export function buildRecurringDateKeys({
   return dates;
 }
 
-export function createDefaultTasks(_tasks: DashboardTask[]): Task[] {
+export function createDefaultTasks(): Task[] {
   return [];
 }
 
@@ -308,9 +476,11 @@ export async function readArchivedTasks(): Promise<ArchivedTask[]> {
       title: task.title,
       subtitle: task.subtitle,
       date: task.date,
+      endDate: task.endDate,
       time: task.time,
       scope: task.scope,
       category: task.category,
+      subtasks: task.subtasks,
       completedAt: task.completedAt as string,
       xp: task.xp,
       createdBy: task.createdBy,
@@ -343,14 +513,16 @@ export async function addTask(input: TaskInput) {
   }
 
   const activeUser = readActiveUser();
+  const defaultSubtitle =
+    input.category === "purchase" ? "Større oppgave" : "";
 
   const { error } = await supabase.from("legacy_tasks").insert({
     title,
-    subtitle:
-      input.subtitle?.trim() ||
-      (input.category === "purchase"
-        ? "Større oppgave"
-        : "Egendefinert oppgave"),
+    subtitle: encodeTaskDetails({
+      description: input.subtitle?.trim() || defaultSubtitle,
+      endDate: input.endDate,
+      subtasks: input.subtasks,
+    }),
     task_date: input.date || null,
     task_time: input.time || "Hele dagen",
     scope: input.scope,
@@ -399,14 +571,17 @@ export async function addRecurringTasks(input: RecurringTaskInput) {
 
   const subtitle =
     input.subtitle?.trim() ||
-    (input.category === "purchase"
-      ? "Større oppgave"
-      : "Egendefinert oppgave");
+    (input.category === "purchase" ? "Større oppgave" : "");
+  const encodedSubtitle = encodeTaskDetails({
+    description: subtitle,
+    endDate: input.endDate,
+    subtasks: input.subtasks,
+  });
 
   const { error } = await supabase.from("legacy_tasks").insert(
     dates.map((date) => ({
       title,
-      subtitle,
+      subtitle: encodedSubtitle,
       task_date: date,
       task_time: input.time || "Hele dagen",
       scope: input.scope,
@@ -476,6 +651,11 @@ export async function updateTask(taskId: string, input: TaskUpdateInput) {
     .from("legacy_tasks")
     .update({
       title,
+      subtitle: encodeTaskDetails({
+        description: input.subtitle,
+        endDate: input.endDate,
+        subtasks: input.subtasks,
+      }),
       task_date: input.date || null,
       scope: input.scope,
       task_category: input.category,
@@ -484,6 +664,30 @@ export async function updateTask(taskId: string, input: TaskUpdateInput) {
 
   if (error) {
     console.error("Kunne ikke oppdatere oppgave:", error);
+    return;
+  }
+
+  notifyTaskAndXpUpdates();
+}
+
+export async function toggleTaskSubtask(task: Task, subtaskId: string) {
+  const nextSubtasks = task.subtasks.map((subtask) =>
+    subtask.id === subtaskId ? { ...subtask, done: !subtask.done } : subtask
+  );
+
+  const { error } = await supabase
+    .from("legacy_tasks")
+    .update({
+      subtitle: encodeTaskDetails({
+        description: task.subtitle,
+        endDate: task.endDate,
+        subtasks: nextSubtasks,
+      }),
+    })
+    .eq("id", task.id);
+
+  if (error) {
+    console.error("Kunne ikke oppdatere underpunkt:", error);
     return;
   }
 
@@ -557,3 +761,5 @@ export function subscribeToTasks(onChange: () => void) {
     supabase.removeChannel(channel);
   };
 }
+
+
