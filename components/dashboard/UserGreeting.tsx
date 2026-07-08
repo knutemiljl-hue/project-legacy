@@ -102,7 +102,7 @@ function StatusChip({
 
   return (
     <div
-      className={`flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-3 shadow-sm sm:px-4 ${toneClasses.shell}`}
+      className={`legacy-dark-stat-chip flex min-w-0 items-center gap-2 rounded-2xl border px-3 py-3 shadow-sm sm:px-4 ${toneClasses.shell}`}
     >
       <div
         className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl shadow-sm ${toneClasses.icon}`}
@@ -200,7 +200,7 @@ export default function UserGreeting() {
   }, []);
 
   return (
-    <section className="overflow-hidden rounded-[2rem] border border-[#E2D8C7] bg-white/85 p-5 shadow-sm ring-1 ring-black/5 sm:rounded-[2.5rem] sm:p-7">
+    <section className="legacy-dark-hero overflow-hidden rounded-[2rem] border border-[#E2D8C7] bg-white/85 p-5 shadow-sm ring-1 ring-black/5 sm:rounded-[2.5rem] sm:p-7">
       <div className="flex flex-col gap-5">
         <div className="flex min-w-0 items-center gap-4 sm:gap-6">
           <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-[1.75rem] border border-[#E2D8C7] bg-white shadow-sm ring-1 ring-black/5 sm:h-28 sm:w-28 sm:rounded-[2.25rem]">

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import QuickAddMenu from "./QuickAddMenu";
+import ThemeToggle from "./ThemeToggle";
 import {
   LegacyUserId,
   legacyUsers,
@@ -28,7 +29,9 @@ export default function Topbar() {
   const activeUser = legacyUsers.find((user) => user.id === activeUserId);
 
   useEffect(() => {
-    setActiveUserId(readActiveUser().id);
+    const initialLoadTimer = window.setTimeout(() => {
+      setActiveUserId(readActiveUser().id);
+    }, 0);
 
     function updateActiveUser() {
       setActiveUserId(readActiveUser().id);
@@ -41,6 +44,7 @@ export default function Topbar() {
     window.addEventListener("storage", updateActiveUser);
 
     return () => {
+      window.clearTimeout(initialLoadTimer);
       window.removeEventListener(
         "project-legacy-active-user-updated",
         updateActiveUser
@@ -68,6 +72,8 @@ export default function Topbar() {
         </div>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <ThemeToggle />
+
           <div className="flex max-w-[138px] items-center gap-2 rounded-2xl border border-[#E2D8C7] bg-white/85 px-2 py-2 shadow-sm ring-1 ring-black/5 sm:max-w-none sm:px-3">
             <div className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-xl bg-[#EEF5E8] text-xs font-semibold text-[#4F773D]">
               {activeUser?.initials ?? "KE"}

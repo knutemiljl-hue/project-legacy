@@ -41,11 +41,26 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#F7F4EA",
-  colorScheme: "light",
+  colorScheme: "light dark",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
 };
+
+const themeScript = `
+(() => {
+  try {
+    const storedTheme = window.localStorage.getItem("project-legacy-theme");
+    const theme = storedTheme === "dark" ? "dark" : "light";
+    document.documentElement.classList.remove("theme-light", "theme-dark");
+    document.documentElement.classList.add("theme-" + theme);
+    document.documentElement.dataset.theme = theme;
+  } catch {
+    document.documentElement.classList.add("theme-light");
+    document.documentElement.dataset.theme = "light";
+  }
+})();
+`;
 
 export default function RootLayout({
   children,
@@ -53,8 +68,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="nb">
+    <html
+      lang="nb"
+      className="theme-light"
+      data-theme="light"
+      suppressHydrationWarning
+    >
       <body>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <PwaRegistration />
         <AppShell>{children}</AppShell>
       </body>

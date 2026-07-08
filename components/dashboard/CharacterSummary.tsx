@@ -170,7 +170,7 @@ export default function CharacterSummary() {
   }, []);
 
   return (
-    <section className="rounded-3xl border border-[#E6D59A] bg-[#FFF8DF] p-5 shadow-sm ring-1 ring-black/5">
+    <section className="legacy-dark-panel legacy-dark-xp-panel rounded-3xl border border-[#E6D59A] bg-[#FFF8DF] p-5 shadow-sm ring-1 ring-black/5">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
           <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#F3E3A3] text-[#8D6D1F]">

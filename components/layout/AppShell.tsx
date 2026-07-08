@@ -10,10 +10,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <UserPicker>
         <div
           className="min-h-screen text-[#24312A]"
-          style={{
-            background:
-              "radial-gradient(circle at top left, rgba(255, 255, 255, 0.9), transparent 34rem), linear-gradient(135deg, #F7F4EA 0%, #EFE9DD 45%, #E8DFCF 100%)",
-          }}
+          style={{ background: "var(--app-background)" }}
         >
           <div className="flex min-h-screen">
             <Sidebar />

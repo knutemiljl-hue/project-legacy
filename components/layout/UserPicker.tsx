@@ -14,8 +14,14 @@ export default function UserPicker({ children }: { children: React.ReactNode }) 
   const [hasUser, setHasUser] = useState(false);
 
   useEffect(() => {
-    setHasUser(hasSelectedActiveUser());
-    setHasCheckedUser(true);
+    const initialLoadTimer = window.setTimeout(() => {
+      setHasUser(hasSelectedActiveUser());
+      setHasCheckedUser(true);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(initialLoadTimer);
+    };
   }, []);
 
   function chooseUser(userId: LegacyUserId) {
@@ -27,10 +33,7 @@ export default function UserPicker({ children }: { children: React.ReactNode }) 
     return (
       <div
         className="min-h-screen"
-        style={{
-          background:
-            "radial-gradient(circle at top left, rgba(255, 255, 255, 0.9), transparent 34rem), linear-gradient(135deg, #F7F4EA 0%, #EFE9DD 45%, #E8DFCF 100%)",
-        }}
+        style={{ background: "var(--app-background)" }}
       />
     );
   }
@@ -42,10 +45,7 @@ export default function UserPicker({ children }: { children: React.ReactNode }) 
   return (
     <main
       className="flex min-h-screen items-center justify-center px-5 py-10 text-[#24312A]"
-      style={{
-        background:
-          "radial-gradient(circle at top left, rgba(255, 255, 255, 0.9), transparent 34rem), linear-gradient(135deg, #F7F4EA 0%, #EFE9DD 45%, #E8DFCF 100%)",
-      }}
+      style={{ background: "var(--app-background)" }}
     >
       <section className="w-full max-w-3xl rounded-[2.5rem] border border-[#E2D8C7] bg-white/80 p-6 shadow-xl ring-1 ring-black/5 backdrop-blur-xl sm:p-9">
         <div className="mx-auto mb-8 grid h-14 w-14 place-items-center rounded-3xl bg-[#EEF5E8] text-2xl text-[#4F773D]">

@@ -188,7 +188,7 @@ export default function LargeTasksSummary() {
   const visiblePreviewTasks = visibleLargeTasks.slice(0, 4);
 
   return (
-    <section className="rounded-3xl border border-[#D9C7E8] bg-[#F7F1FB] p-6 shadow-sm ring-1 ring-black/5">
+    <section className="legacy-dark-panel legacy-dark-panel-purple rounded-3xl border border-[#D9C7E8] bg-[#F7F1FB] p-6 shadow-sm ring-1 ring-black/5">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
           <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#EADCF5] text-[#6F4D8B]">

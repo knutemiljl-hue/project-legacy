@@ -118,7 +118,7 @@ export default function ShoppingList({ compact = false }: ShoppingListProps) {
   const completedItems = items.filter((item) => item.completed);
 
   return (
-    <section className="rounded-3xl border border-[#E8D58C] bg-[#FFF9E7] p-6 shadow-sm ring-1 ring-black/5">
+    <section className="legacy-dark-panel legacy-dark-panel-amber rounded-3xl border border-[#E8D58C] bg-[#FFF9E7] p-6 shadow-sm ring-1 ring-black/5">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
           <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#FFF0B8] text-[#8D6D1F]">

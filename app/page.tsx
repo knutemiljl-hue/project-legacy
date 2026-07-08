@@ -7,7 +7,7 @@ import ShoppingList from "@/components/shopping/ShoppingList";
 
 export default function Home() {
   return (
-    <main className="mx-auto w-full max-w-[1720px] space-y-5 sm:space-y-7">
+    <main className="legacy-dark-dashboard mx-auto w-full max-w-[1720px] space-y-5 sm:space-y-7">
       <UserGreeting />
 
       <section className="grid grid-cols-1 gap-5 sm:gap-6 xl:grid-cols-[minmax(0,1.08fr)_minmax(420px,0.92fr)] xl:items-start">

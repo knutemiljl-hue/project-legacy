@@ -479,7 +479,7 @@ export default function DailyTasks() {
   }
 
   return (
-    <section className="rounded-3xl border border-[#CFE4C5] bg-[#F3FAF1] p-4 shadow-sm ring-1 ring-black/5 sm:p-6">
+    <section className="legacy-dark-panel legacy-dark-panel-green rounded-3xl border border-[#CFE4C5] bg-[#F3FAF1] p-4 shadow-sm ring-1 ring-black/5 sm:p-6">
       <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex items-start gap-4">
           <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#E2F1D8] text-[#3F6F35]">
