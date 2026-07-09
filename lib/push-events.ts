@@ -4,6 +4,14 @@ import type { LegacyUserId } from "@/lib/users";
 
 const allUsers: LegacyUserId[] = ["knut", "ingrid"];
 
+function getTaskRecipients(scope: TaskScope, owner: LegacyUserId) {
+  return scope === "family" ? allUsers : [owner];
+}
+
+function getCalendarRecipients(owner: CalendarOwner) {
+  return owner === "family" ? allUsers : [owner];
+}
+
 function sendPushNotification({
   body,
   tag,
@@ -47,7 +55,7 @@ export function notifyTaskCreatedByPush({
   scope: TaskScope;
   title: string;
 }) {
-  const userIds = scope === "family" ? allUsers : [createdBy];
+  const userIds = getTaskRecipients(scope, createdBy);
 
   sendPushNotification({
     body:
@@ -61,6 +69,29 @@ export function notifyTaskCreatedByPush({
   });
 }
 
+export function notifyTaskUpdatedByPush({
+  owner,
+  scope,
+  title,
+}: {
+  owner: LegacyUserId;
+  scope: TaskScope;
+  title: string;
+}) {
+  const userIds = getTaskRecipients(scope, owner);
+
+  sendPushNotification({
+    body:
+      scope === "family"
+        ? `Familieoppgaven er oppdatert: ${title}`
+        : `Oppgaven er oppdatert: ${title}`,
+    tag: "project-legacy-task-updated",
+    title: "Oppgave endret",
+    url: "/tasks",
+    userIds,
+  });
+}
+
 export function notifyCalendarEventCreatedByPush({
   owner,
   title,
@@ -68,7 +99,7 @@ export function notifyCalendarEventCreatedByPush({
   owner: CalendarOwner;
   title: string;
 }) {
-  const userIds = owner === "family" ? allUsers : [owner];
+  const userIds = getCalendarRecipients(owner);
 
   sendPushNotification({
     body:
@@ -79,5 +110,43 @@ export function notifyCalendarEventCreatedByPush({
     title: "Ny kalenderavtale",
     url: "/calendar",
     userIds,
+  });
+}
+
+export function notifyCalendarEventUpdatedByPush({
+  owner,
+  title,
+}: {
+  owner: CalendarOwner;
+  title: string;
+}) {
+  const userIds = getCalendarRecipients(owner);
+
+  sendPushNotification({
+    body:
+      owner === "family"
+        ? `Felles avtale er oppdatert: ${title}`
+        : `Avtale er oppdatert: ${title}`,
+    tag: "project-legacy-calendar-updated",
+    title: "Kalenderavtale endret",
+    url: "/calendar",
+    userIds,
+  });
+}
+
+export function notifyShoppingItemsCreatedByPush(titles: string[]) {
+  if (titles.length === 0) {
+    return;
+  }
+
+  sendPushNotification({
+    body:
+      titles.length === 1
+        ? `Lagt til i handlelisten: ${titles[0]}`
+        : `${titles.length} varer er lagt til i handlelisten.`,
+    tag: "project-legacy-shopping-created",
+    title: titles.length === 1 ? "Ny handlelistevare" : "Nye handlelistevarer",
+    url: "/family",
+    userIds: allUsers,
   });
 }

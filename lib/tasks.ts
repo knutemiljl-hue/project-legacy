@@ -1,5 +1,8 @@
 ﻿import { supabase } from "@/lib/supabase";
-import { notifyTaskCreatedByPush } from "@/lib/push-events";
+import {
+  notifyTaskCreatedByPush,
+  notifyTaskUpdatedByPush,
+} from "@/lib/push-events";
 import { LegacyUserId, readActiveUser } from "@/lib/users";
 
 export const XP_PER_TASK = 5;
@@ -273,6 +276,22 @@ export function getTodayKey() {
   return getLocalDateKey();
 }
 
+function isCompletedToday(completedAt?: string | null) {
+  if (!completedAt) {
+    return false;
+  }
+
+  return getDateKey(new Date(completedAt)) === getTodayKey();
+}
+
+function isCompletedBeforeToday(completedAt?: string | null) {
+  if (!completedAt) {
+    return false;
+  }
+
+  return getDateKey(new Date(completedAt)) < getTodayKey();
+}
+
 export function isTaskForToday(task: Pick<Task, "date" | "endDate">) {
   if (!task.date) {
     return true;
@@ -438,12 +457,13 @@ export function createDefaultTasks(): Task[] {
 }
 
 export async function readTasks(): Promise<Task[]> {
+  await archiveCompletedTasksFromPreviousDays();
+
   const { data, error } = await supabase
     .from("legacy_tasks")
     .select(
       "id, title, subtitle, task_date, task_time, scope, task_category, is_done, is_archived, created_by, completed_by, completed_at, archived_at, xp, created_at"
     )
-    .eq("is_archived", false)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -451,10 +471,15 @@ export async function readTasks(): Promise<Task[]> {
     return [];
   }
 
-  return (data ?? []).map((task) => mapTask(task as TaskRow));
+  return (data ?? [])
+    .map((task) => task as TaskRow)
+    .filter((task) => !task.is_archived || isCompletedToday(task.completed_at))
+    .map((task) => mapTask(task));
 }
 
 export async function readArchivedTasks(): Promise<ArchivedTask[]> {
+  await archiveCompletedTasksFromPreviousDays();
+
   const { data, error } = await supabase
     .from("legacy_tasks")
     .select(
@@ -470,7 +495,9 @@ export async function readArchivedTasks(): Promise<ArchivedTask[]> {
 
   return (data ?? [])
     .map((task) => mapTask(task as TaskRow))
-    .filter((task) => task.completedAt)
+    .filter(
+      (task) => task.completedAt && isCompletedBeforeToday(task.completedAt)
+    )
     .map((task) => ({
       id: task.id,
       taskId: task.id,
@@ -622,10 +649,10 @@ export async function toggleTaskCompleted(task: Task) {
   const update = nextDone
     ? {
         is_done: true,
-        is_archived: true,
+        is_archived: false,
         completed_by: activeUser.id,
         completed_at: completedAt,
-        archived_at: completedAt,
+        archived_at: null,
         xp: task.xp ?? XP_PER_TASK,
       }
     : {
@@ -651,12 +678,62 @@ export async function toggleTaskCompleted(task: Task) {
   notifyTaskAndXpUpdates();
 }
 
+export async function archiveCompletedTasksFromPreviousDays() {
+  const { data, error } = await supabase
+    .from("legacy_tasks")
+    .select("id, completed_at")
+    .eq("is_done", true)
+    .eq("is_archived", false)
+    .not("completed_at", "is", null);
+
+  if (error) {
+    console.error("Kunne ikke hente fullførte oppgaver for arkivering:", error);
+    return;
+  }
+
+  const taskIdsToArchive = (data ?? [])
+    .filter((task) =>
+      isCompletedBeforeToday(task.completed_at as string | null | undefined)
+    )
+    .map((task) => task.id as string);
+
+  if (taskIdsToArchive.length === 0) {
+    return;
+  }
+
+  const { error: archiveError } = await supabase
+    .from("legacy_tasks")
+    .update({
+      is_archived: true,
+      archived_at: new Date().toISOString(),
+    })
+    .in("id", taskIdsToArchive);
+
+  if (archiveError) {
+    console.error("Kunne ikke arkivere fullførte oppgaver:", archiveError);
+  }
+}
+
 export async function updateTask(taskId: string, input: TaskUpdateInput) {
   const title = input.title.trim();
 
   if (!title) {
     return;
   }
+
+  const { data: existingData, error: readError } = await supabase
+    .from("legacy_tasks")
+    .select("created_by")
+    .eq("id", taskId)
+    .maybeSingle();
+
+  if (readError) {
+    console.error("Kunne ikke hente oppgave før oppdatering:", readError);
+    return;
+  }
+
+  const activeUser = readActiveUser();
+  const owner = (existingData?.created_by ?? activeUser.id) as LegacyUserId;
 
   const { error } = await supabase
     .from("legacy_tasks")
@@ -679,6 +756,11 @@ export async function updateTask(taskId: string, input: TaskUpdateInput) {
   }
 
   notifyTaskAndXpUpdates();
+  notifyTaskUpdatedByPush({
+    owner,
+    scope: input.scope,
+    title,
+  });
 }
 
 export async function toggleTaskSubtask(task: Task, subtaskId: string) {

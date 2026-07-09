@@ -26,6 +26,7 @@ import {
   readTasks,
   subscribeToTasks,
   toggleTaskCompleted,
+  toggleTaskSubtask,
   updateTask,
 } from "@/lib/tasks";
 import {
@@ -66,6 +67,53 @@ function TaskMetaLine({ task }: { task: Task }) {
   );
 }
 
+function SubtaskPreview({
+  task,
+  onToggleSubtask,
+}: {
+  task: Task;
+  onToggleSubtask?: (task: Task, subtaskId: string) => void;
+}) {
+  if (task.subtasks.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+      {task.subtasks.slice(0, 4).map((subtask) => (
+        <button
+          key={subtask.id}
+          type="button"
+          onClick={() => onToggleSubtask?.(task, subtask.id)}
+          disabled={!onToggleSubtask}
+          className={`flex items-center gap-2 rounded-2xl px-3 py-2 text-xs font-medium ${
+            subtask.done
+              ? "bg-[#EEF5E8] text-[#6F8F54]"
+              : "bg-white text-[#8D846F] hover:brightness-95"
+          } disabled:cursor-default disabled:hover:brightness-100`}
+        >
+          <span
+            className={`grid h-4 w-4 shrink-0 place-items-center rounded-full ${
+              subtask.done
+                ? "bg-[#8EB069] text-white"
+                : "border border-stone-300 text-transparent"
+            }`}
+          >
+            <Check size={10} strokeWidth={2.5} />
+          </span>
+          <span className="min-w-0 truncate">{subtask.title}</span>
+        </button>
+      ))}
+
+      {task.subtasks.length > 4 && (
+        <div className="rounded-2xl bg-white px-3 py-2 text-xs font-medium text-stone-500">
+          +{task.subtasks.length - 4} flere
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CompletedByText({ completedBy }: { completedBy?: string }) {
   if (!completedBy) {
     return null;
@@ -94,12 +142,14 @@ function TaskList({
   title,
   tasks,
   onToggleTask,
+  onToggleSubtask,
   onDeleteTask,
   onUpdateTask,
 }: {
   title: string;
   tasks: Task[];
   onToggleTask: (task: Task) => void;
+  onToggleSubtask: (task: Task, subtaskId: string) => void;
   onDeleteTask: (taskId: string) => void;
   onUpdateTask: (task: Task, input: TaskEditInput) => Promise<void>;
 }) {
@@ -153,14 +203,15 @@ function TaskList({
                   </div>
                 ) : (
                   <>
-                    <button
-                      type="button"
-                      onClick={() => onToggleTask(task)}
-                      className="flex flex-1 items-start gap-3 text-left sm:items-center"
-                    >
-                      <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white text-stone-300 sm:mt-0">
+                    <div className="flex flex-1 items-start gap-3 text-left sm:items-center">
+                      <button
+                        type="button"
+                        onClick={() => onToggleTask(task)}
+                        className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full border border-stone-300 bg-white text-stone-300 transition hover:brightness-95 sm:mt-0"
+                        aria-label={`Fullfør ${task.title}`}
+                      >
                         <Circle size={13} strokeWidth={2} />
-                      </span>
+                      </button>
 
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
@@ -176,8 +227,12 @@ function TaskList({
                         </div>
 
                         <TaskMetaLine task={task} />
+                        <SubtaskPreview
+                          task={task}
+                          onToggleSubtask={onToggleSubtask}
+                        />
                       </div>
-                    </button>
+                    </div>
 
                     <div className="ml-9 flex items-center justify-between gap-3 sm:ml-4 sm:justify-end">
                       <div className="text-left sm:text-right">
@@ -318,6 +373,8 @@ function CompletedTasks({
                     <CreatedByText createdBy={task.createdBy} />
                     <CompletedByText completedBy={task.completedBy} />
                   </p>
+
+                  <SubtaskPreview task={task} />
                 </div>
 
                 <button
@@ -438,6 +495,26 @@ export default function DailyTasks() {
     await loadData();
   }
 
+  async function handleToggleSubtask(task: Task, subtaskId: string) {
+    setTasks((currentTasks) =>
+      currentTasks.map((currentTask) =>
+        currentTask.id === task.id
+          ? {
+              ...currentTask,
+              subtasks: currentTask.subtasks.map((subtask) =>
+                subtask.id === subtaskId
+                  ? { ...subtask, done: !subtask.done }
+                  : subtask
+              ),
+            }
+          : currentTask
+      )
+    );
+
+    await toggleTaskSubtask(task, subtaskId);
+    await loadData();
+  }
+
   async function handleDeleteTask(taskId: string) {
     setTasks((currentTasks) =>
       currentTasks.filter((task) => task.id !== taskId)
@@ -515,6 +592,7 @@ export default function DailyTasks() {
           title="Egne oppgaver"
           tasks={personalTasks}
           onToggleTask={handleToggleTask}
+          onToggleSubtask={handleToggleSubtask}
           onDeleteTask={handleDeleteTask}
           onUpdateTask={handleUpdateTask}
         />
@@ -523,6 +601,7 @@ export default function DailyTasks() {
           title="Familieoppgaver"
           tasks={familyTasks}
           onToggleTask={handleToggleTask}
+          onToggleSubtask={handleToggleSubtask}
           onDeleteTask={handleDeleteTask}
           onUpdateTask={handleUpdateTask}
         />

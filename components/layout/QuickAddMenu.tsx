@@ -221,7 +221,7 @@ export default function QuickAddMenu() {
   const [taskTitle, setTaskTitle] = useState("");
   const [taskSubtitle, setTaskSubtitle] = useState("");
   const [taskDate, setTaskDate] = useState(getLocalDateKey());
-  const [taskEndDate, setTaskEndDate] = useState("");
+  const [taskEndDate, setTaskEndDate] = useState(getLocalDateKey());
   const [taskTime, setTaskTime] = useState("");
   const [taskScope, setTaskScope] = useState<"personal" | "family">("personal");
   const [taskCategory, setTaskCategory] = useState<TaskCategory>("task");
@@ -302,7 +302,7 @@ export default function QuickAddMenu() {
     setTaskTitle("");
     setTaskSubtitle("");
     setTaskDate(getLocalDateKey());
-    setTaskEndDate("");
+    setTaskEndDate(getLocalDateKey());
     setTaskTime("");
     setTaskScope("personal");
     setTaskCategory("task");
@@ -604,7 +604,15 @@ export default function QuickAddMenu() {
                         <input
                           type="date"
                           value={taskDate}
-                          onChange={(event) => setTaskDate(event.target.value)}
+                          onChange={(event) => {
+                            const nextDate = event.target.value;
+
+                            setTaskDate(nextDate);
+
+                            if (!taskEndDate || taskEndDate === taskDate) {
+                              setTaskEndDate(nextDate);
+                            }
+                          }}
                           className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition focus:border-[#8D846F] sm:text-sm"
                         />
                       </label>

@@ -32,6 +32,7 @@ import {
   readTasks,
   subscribeToTasks,
   toggleTaskCompleted,
+  toggleTaskSubtask,
   updateTask,
 } from "@/lib/tasks";
 import {
@@ -130,12 +131,14 @@ function TaskRow({
   task,
   activeUserId,
   onToggleTask,
+  onToggleSubtask,
   onDeleteTask,
   onUpdateTask,
 }: {
   task: Task;
   activeUserId: LegacyUserId;
   onToggleTask: (task: Task) => void;
+  onToggleSubtask: (task: Task, subtaskId: string) => void;
   onDeleteTask: (taskId: string) => void;
   onUpdateTask: (
     task: Task,
@@ -360,12 +363,11 @@ function TaskRow({
 
   return (
     <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-      <button
-        type="button"
-        onClick={() => onToggleTask(task)}
-        className="flex flex-1 items-start gap-3 text-left sm:items-center"
-      >
-        <span
+      <div className="flex flex-1 items-start gap-3 text-left sm:items-center">
+        <button
+          type="button"
+          onClick={() => onToggleTask(task)}
+          aria-label={task.done ? `Angre ${task.title}` : `Fullfør ${task.title}`}
           className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full sm:mt-0 ${
             task.done
               ? "bg-[#8EB069] text-white"
@@ -377,7 +379,7 @@ function TaskRow({
           ) : (
             <Circle size={13} strokeWidth={2} />
           )}
-        </span>
+        </button>
 
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -417,17 +419,24 @@ function TaskRow({
           {task.subtasks.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-2">
               {task.subtasks.slice(0, 4).map((subtask) => (
-                <span
+                <button
                   key={subtask.id}
+                  type="button"
+                  onClick={() => onToggleSubtask(task, subtask.id)}
                   className={`rounded-full px-2 py-1 text-xs font-medium ${
                     subtask.done
                       ? "bg-[#EEF5E8] text-[#6F8F54]"
-                      : "bg-white text-[#8D846F]"
+                      : "bg-white text-[#8D846F] hover:brightness-95"
                   }`}
+                  aria-label={
+                    subtask.done
+                      ? `Marker ${subtask.title} som ikke gjort`
+                      : `Marker ${subtask.title} som gjort`
+                  }
                 >
                   {subtask.done ? "✓ " : ""}
                   {subtask.title}
-                </span>
+                </button>
               ))}
 
               {task.subtasks.length > 4 && (
@@ -444,7 +453,7 @@ function TaskRow({
             </p>
           )}
         </div>
-      </button>
+      </div>
 
       <div className="ml-9 flex items-center justify-between gap-3 sm:ml-4 sm:justify-end">
         <div className="text-left sm:text-right">
@@ -517,6 +526,7 @@ function TaskSection({
   emptyText,
   icon,
   onToggleTask,
+  onToggleSubtask,
   onDeleteTask,
   onUpdateTask,
 }: {
@@ -527,6 +537,7 @@ function TaskSection({
   emptyText: string;
   icon: React.ReactNode;
   onToggleTask: (task: Task) => void;
+  onToggleSubtask: (task: Task, subtaskId: string) => void;
   onDeleteTask: (taskId: string) => void;
   onUpdateTask: (
     task: Task,
@@ -580,6 +591,7 @@ function TaskSection({
                 task={task}
                 activeUserId={activeUserId}
                 onToggleTask={onToggleTask}
+                onToggleSubtask={onToggleSubtask}
                 onDeleteTask={onDeleteTask}
                 onUpdateTask={onUpdateTask}
               />
@@ -654,6 +666,26 @@ export default function TasksBoard() {
     );
 
     await toggleTaskCompleted(task);
+    await loadTasks();
+  }
+
+  async function handleToggleSubtask(task: Task, subtaskId: string) {
+    setTasks((currentTasks) =>
+      currentTasks.map((currentTask) =>
+        currentTask.id === task.id
+          ? {
+              ...currentTask,
+              subtasks: currentTask.subtasks.map((subtask) =>
+                subtask.id === subtaskId
+                  ? { ...subtask, done: !subtask.done }
+                  : subtask
+              ),
+            }
+          : currentTask
+      )
+    );
+
+    await toggleTaskSubtask(task, subtaskId);
     await loadTasks();
   }
 
@@ -826,6 +858,7 @@ export default function TasksBoard() {
         emptyText="Ingen forsinkede oppgaver."
         icon={<Clock size={21} strokeWidth={2} />}
         onToggleTask={handleToggleTask}
+        onToggleSubtask={handleToggleSubtask}
         onDeleteTask={handleDeleteTask}
         onUpdateTask={handleUpdateTask}
       />
@@ -838,6 +871,7 @@ export default function TasksBoard() {
         emptyText="Ingen åpne oppgaver for i dag."
         icon={<CheckCircle2 size={21} strokeWidth={2} />}
         onToggleTask={handleToggleTask}
+        onToggleSubtask={handleToggleSubtask}
         onDeleteTask={handleDeleteTask}
         onUpdateTask={handleUpdateTask}
       />
@@ -850,6 +884,7 @@ export default function TasksBoard() {
         emptyText="Ingen fremtidige oppgaver."
         icon={<Clock size={21} strokeWidth={2} />}
         onToggleTask={handleToggleTask}
+        onToggleSubtask={handleToggleSubtask}
         onDeleteTask={handleDeleteTask}
         onUpdateTask={handleUpdateTask}
       />
@@ -862,6 +897,7 @@ export default function TasksBoard() {
         emptyText="Ingen store ting eller innkjøp lagt inn."
         icon={<ShoppingBag size={21} strokeWidth={2} />}
         onToggleTask={handleToggleTask}
+        onToggleSubtask={handleToggleSubtask}
         onDeleteTask={handleDeleteTask}
         onUpdateTask={handleUpdateTask}
       />
@@ -874,6 +910,7 @@ export default function TasksBoard() {
         emptyText="Ingen fullførte oppgaver i dag."
         icon={<PackageCheck size={21} strokeWidth={2} />}
         onToggleTask={handleToggleTask}
+        onToggleSubtask={handleToggleSubtask}
         onDeleteTask={handleDeleteTask}
         onUpdateTask={handleUpdateTask}
       />

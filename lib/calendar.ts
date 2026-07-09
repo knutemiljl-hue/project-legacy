@@ -1,5 +1,8 @@
 import { supabase } from "@/lib/supabase";
-import { notifyCalendarEventCreatedByPush } from "@/lib/push-events";
+import {
+  notifyCalendarEventCreatedByPush,
+  notifyCalendarEventUpdatedByPush,
+} from "@/lib/push-events";
 import { LegacyUserId, readActiveUser } from "@/lib/users";
 
 export const MAX_CALENDAR_RECURRENCE_ITEMS = 52;
@@ -517,6 +520,10 @@ export async function updateCalendarEvent(
   }
 
   notifyCalendarUpdated();
+  notifyCalendarEventUpdatedByPush({
+    owner: updatedEvent.calendarOwner ?? "family",
+    title: normalizedEvent.title,
+  });
 }
 
 export async function updateCalendarEventAndFuture(
@@ -612,6 +619,10 @@ export async function updateCalendarEventAndFuture(
   }
 
   notifyCalendarUpdated();
+  notifyCalendarEventUpdatedByPush({
+    owner: updatedEvent.calendarOwner ?? "family",
+    title: normalizedEvent.title,
+  });
 }
 
 export async function deleteCalendarEvent(eventId: string) {

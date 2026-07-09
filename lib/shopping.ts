@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { notifyShoppingItemsCreatedByPush } from "@/lib/push-events";
 import { LegacyUserId, readActiveUser } from "@/lib/users";
 
 export type ShoppingItem = {
@@ -111,6 +112,7 @@ export async function addShoppingItems(input: string) {
   }
 
   notifyShoppingUpdated();
+  notifyShoppingItemsCreatedByPush(titles);
 }
 
 export async function updateShoppingItemCompleted(
