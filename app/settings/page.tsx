@@ -151,7 +151,7 @@ export default function SettingsPage() {
 
           <div className="rounded-2xl bg-[#F7F4EA] px-4 py-3 text-right">
             <p className="text-xs text-stone-500">Versjon</p>
-            <p className="text-lg font-semibold text-[#24312A]">v1</p>
+            <p className="text-lg font-semibold text-[#24312A]">v2</p>
           </div>
         </div>
 
