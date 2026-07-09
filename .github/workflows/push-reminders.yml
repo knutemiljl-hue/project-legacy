@@ -19,11 +19,6 @@ jobs:
     steps:
       - name: Call reminder endpoint
         env:
-          REMINDERS_URL: ${{ secrets.REMINDERS_URL }}
+          REMINDERS_URL: ${{ secrets.REMINDERS_URL || 'https://project-legacy-mu.vercel.app/api/push/reminders' }}
         run: |
-          if [ -z "$REMINDERS_URL" ]; then
-            echo "REMINDERS_URL secret is not set"
-            exit 1
-          fi
-
           curl --fail --show-error --silent --max-time 30 "$REMINDERS_URL"
