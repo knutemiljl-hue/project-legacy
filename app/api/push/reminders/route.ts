@@ -40,6 +40,18 @@ const timeZone = "Europe/Oslo";
 const reminderWindowMinutes = 30;
 const validReminderOffsets = new Set([0, 5, 15, 30, 60, 1440]);
 
+function isAuthorizedReminderRequest(request: Request) {
+  const expectedSecret = process.env.REMINDERS_SECRET;
+
+  if (!expectedSecret) {
+    return true;
+  }
+
+  const url = new URL(request.url);
+
+  return url.searchParams.get("secret") === expectedSecret;
+}
+
 function getNorwayDateKey(date = new Date()) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     day: "2-digit",
@@ -315,7 +327,14 @@ async function readCalendarReminderCandidates() {
   );
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  if (!isAuthorizedReminderRequest(request)) {
+    return NextResponse.json(
+      { ok: false, message: "Unauthorized reminder request." },
+      { status: 401 }
+    );
+  }
+
   const taskCandidates = await readTaskReminderCandidates();
   const calendarCandidates = await readCalendarReminderCandidates();
   const candidates = [...taskCandidates, ...calendarCandidates].sort(
