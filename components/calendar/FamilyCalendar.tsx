@@ -31,6 +31,11 @@ import {
   subscribeToCalendarEvents,
   updateCalendarEventAndFuture,
 } from "@/lib/calendar";
+import {
+  ReminderValue,
+  normalizeReminderOffset,
+  reminderOptions,
+} from "@/lib/reminders";
 import { getUserDisplayName } from "@/lib/users";
 
 type FamilyCalendarProps = {
@@ -277,6 +282,7 @@ function getInitialEditState(event: CalendarEvent | null) {
     location: event?.location ?? "",
     type: event?.type ?? "family",
     calendarOwner: event?.calendarOwner ?? "family",
+    reminderMinutesBefore: event?.reminderMinutesBefore ?? null,
   };
 }
 
@@ -433,6 +439,8 @@ export default function FamilyCalendar({
   const [editEndDate, setEditEndDate] = useState(getLocalDateKey());
   const [editStartTime, setEditStartTime] = useState("09:00");
   const [editEndTime, setEditEndTime] = useState("10:00");
+  const [editReminderMinutesBefore, setEditReminderMinutesBefore] =
+    useState<ReminderValue>(null);
   const [editLocation, setEditLocation] = useState("");
   const [editType, setEditType] = useState<CalendarEventType>("family");
   const [editCalendarOwner, setEditCalendarOwner] =
@@ -534,6 +542,7 @@ export default function FamilyCalendar({
     setEditEndDate(initialState.endDate);
     setEditStartTime(initialState.startTime);
     setEditEndTime(initialState.endTime);
+    setEditReminderMinutesBefore(initialState.reminderMinutesBefore);
     setEditLocation(initialState.location);
     setEditType(initialState.type);
     setEditCalendarOwner(initialState.calendarOwner);
@@ -546,6 +555,7 @@ export default function FamilyCalendar({
     setEditEndDate(getLocalDateKey());
     setEditStartTime("09:00");
     setEditEndTime("10:00");
+    setEditReminderMinutesBefore(null);
     setEditLocation("");
     setEditType("family");
     setEditCalendarOwner("family");
@@ -569,6 +579,7 @@ export default function FamilyCalendar({
       endDate: editEndDate,
       startTime: editStartTime,
       endTime: editEndTime,
+      reminderMinutesBefore: editReminderMinutesBefore,
       location: editLocation,
       type: editType,
       calendarOwner: editCalendarOwner,
@@ -1099,7 +1110,15 @@ export default function FamilyCalendar({
                     <input
                       type="time"
                       value={editStartTime}
-                      onChange={(event) => setEditStartTime(event.target.value)}
+                      onChange={(event) => {
+                        const nextTime = event.target.value;
+
+                        setEditStartTime(nextTime);
+
+                        if (!nextTime) {
+                          setEditReminderMinutesBefore(null);
+                        }
+                      }}
                       className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F]"
                     />
                   </label>
@@ -1118,6 +1137,32 @@ export default function FamilyCalendar({
                     />
                   </label>
                 </div>
+
+                <label className="block">
+                  <span className="text-sm font-medium text-[#24312A]">
+                    Varsel
+                  </span>
+
+                  <select
+                    value={editReminderMinutesBefore ?? ""}
+                    onChange={(event) =>
+                      setEditReminderMinutesBefore(
+                        normalizeReminderOffset(event.target.value)
+                      )
+                    }
+                    disabled={!editStartTime}
+                    className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-sm text-[#24312A] outline-none transition focus:border-[#8D846F] disabled:cursor-not-allowed disabled:opacity-55"
+                  >
+                    {reminderOptions.map((option) => (
+                      <option
+                        key={option.value ?? "none"}
+                        value={option.value ?? ""}
+                      >
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
                 {editHasInvalidRange && (
                   <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm leading-6 text-red-700">

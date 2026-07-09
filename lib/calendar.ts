@@ -3,6 +3,10 @@ import {
   notifyCalendarEventCreatedByPush,
   notifyCalendarEventUpdatedByPush,
 } from "@/lib/push-events";
+import {
+  ReminderValue,
+  normalizeReminderOffset,
+} from "@/lib/reminders";
 import { LegacyUserId, readActiveUser } from "@/lib/users";
 
 export const MAX_CALENDAR_RECURRENCE_ITEMS = 52;
@@ -40,6 +44,7 @@ export type CalendarEvent = {
   recurrenceFrequency?: CalendarRecurrenceFrequency;
   recurrenceUntil?: string;
   recurrenceIndex?: number;
+  reminderMinutesBefore?: ReminderValue;
 };
 
 export type CalendarEventInput = {
@@ -53,6 +58,7 @@ export type CalendarEventInput = {
   location?: string;
   type: CalendarEventType;
   calendarOwner?: CalendarOwner;
+  reminderMinutesBefore?: ReminderValue;
 };
 
 export type RecurringCalendarEventInput = CalendarEventInput & {
@@ -76,7 +82,11 @@ type CalendarEventRow = {
   recurrence_frequency: CalendarRecurrenceFrequency | null;
   recurrence_until: string | null;
   recurrence_index: number | null;
+  reminder_minutes_before: number | null;
 };
+
+const CALENDAR_EVENT_SELECT =
+  "id, title, event_date, event_time, end_date, end_time, location, type, calendar_owner, created_by, created_at, recurrence_group_id, recurrence_frequency, recurrence_until, recurrence_index, reminder_minutes_before";
 
 function mapCalendarEvent(row: CalendarEventRow): CalendarEvent {
   const startDate = row.event_date;
@@ -100,6 +110,9 @@ function mapCalendarEvent(row: CalendarEventRow): CalendarEvent {
     recurrenceFrequency: row.recurrence_frequency ?? undefined,
     recurrenceUntil: row.recurrence_until ?? undefined,
     recurrenceIndex: row.recurrence_index ?? undefined,
+    reminderMinutesBefore: normalizeReminderOffset(
+      row.reminder_minutes_before
+    ),
   };
 }
 
@@ -376,9 +389,7 @@ export function formatCalendarEventDateRange(event: CalendarEvent) {
 export async function readCalendarEvents(): Promise<CalendarEvent[]> {
   const { data, error } = await supabase
     .from("legacy_calendar_events")
-    .select(
-      "id, title, event_date, event_time, end_date, end_time, location, type, calendar_owner, created_by, created_at, recurrence_group_id, recurrence_frequency, recurrence_until, recurrence_index"
-    )
+    .select(CALENDAR_EVENT_SELECT)
     .order("event_date", { ascending: true })
     .order("event_time", { ascending: true });
 
@@ -411,6 +422,10 @@ export async function addCalendarEvent(event: CalendarEventInput) {
     type: event.type,
     calendar_owner: event.calendarOwner ?? "family",
     created_by: activeUser.id,
+    reminder_minutes_before:
+      normalizedEvent.startTime !== "Hele dagen"
+        ? normalizeReminderOffset(event.reminderMinutesBefore)
+        : null,
   });
 
   if (error) {
@@ -475,6 +490,10 @@ export async function addRecurringCalendarEvents(
       recurrence_frequency: frequency,
       recurrence_until: event.recurrenceUntil,
       recurrence_index: index,
+      reminder_minutes_before:
+        normalizedEvent.startTime !== "Hele dagen"
+          ? normalizeReminderOffset(event.reminderMinutesBefore)
+          : null,
     }))
   );
 
@@ -511,6 +530,10 @@ export async function updateCalendarEvent(
       location: updatedEvent.location?.trim() || null,
       type: updatedEvent.type,
       calendar_owner: updatedEvent.calendarOwner ?? "family",
+      reminder_minutes_before:
+        normalizedEvent.startTime !== "Hele dagen"
+          ? normalizeReminderOffset(updatedEvent.reminderMinutesBefore)
+          : null,
     })
     .eq("id", eventId);
 
@@ -538,9 +561,7 @@ export async function updateCalendarEventAndFuture(
 
   const { data: selectedData, error: selectedError } = await supabase
     .from("legacy_calendar_events")
-    .select(
-      "id, title, event_date, event_time, end_date, end_time, location, type, calendar_owner, created_by, created_at, recurrence_group_id, recurrence_frequency, recurrence_until, recurrence_index"
-    )
+    .select(CALENDAR_EVENT_SELECT)
     .eq("id", originalEvent.id)
     .maybeSingle();
 
@@ -571,9 +592,7 @@ export async function updateCalendarEventAndFuture(
 
   const { data, error: readError } = await supabase
     .from("legacy_calendar_events")
-    .select(
-      "id, title, event_date, event_time, end_date, end_time, location, type, calendar_owner, created_by, created_at, recurrence_group_id, recurrence_frequency, recurrence_until, recurrence_index"
-    )
+    .select(CALENDAR_EVENT_SELECT)
     .eq("recurrence_group_id", recurrenceGroupId)
     .order("recurrence_index", { ascending: true })
     .order("event_date", { ascending: true });
@@ -606,6 +625,10 @@ export async function updateCalendarEventAndFuture(
         location: updatedEvent.location?.trim() || null,
         type: updatedEvent.type,
         calendar_owner: updatedEvent.calendarOwner ?? "family",
+        reminder_minutes_before:
+          normalizedEvent.startTime !== "Hele dagen"
+            ? normalizeReminderOffset(updatedEvent.reminderMinutesBefore)
+            : null,
       })
       .eq("id", event.id);
   });

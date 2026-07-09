@@ -12,6 +12,7 @@ type TaskReminderRow = {
   task_time: string | null;
   scope: "personal" | "family";
   created_by: LegacyUserId | null;
+  reminder_minutes_before: number | null;
 };
 
 type CalendarReminderRow = {
@@ -20,6 +21,7 @@ type CalendarReminderRow = {
   event_date: string;
   event_time: string | null;
   calendar_owner: LegacyUserId | "family" | null;
+  reminder_minutes_before: number | null;
 };
 
 type ReminderCandidate = {
@@ -27,6 +29,7 @@ type ReminderCandidate = {
   itemId: string;
   itemType: "task" | "calendar";
   logKey: string;
+  reminderAt: Date;
   title: string;
   url: string;
   userIds: LegacyUserId[];
@@ -34,30 +37,57 @@ type ReminderCandidate = {
 
 const allUsers: LegacyUserId[] = ["knut", "ingrid"];
 const timeZone = "Europe/Oslo";
+const reminderWindowMinutes = 10;
+const validReminderOffsets = new Set([0, 5, 15, 30, 60, 1440]);
 
-function getNorwayDateParts(date = new Date()) {
+function getNorwayDateKey(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone,
+    year: "numeric",
+  }).formatToParts(date);
+  const values = Object.fromEntries(
+    parts.map((part) => [part.type, part.value])
+  );
+
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function addDaysToDateKey(dateKey: string, days: number) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  date.setUTCDate(date.getUTCDate() + days);
+
+  return date.toISOString().slice(0, 10);
+}
+
+function getTimeZoneParts(date: Date) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     day: "2-digit",
     hour: "2-digit",
     hour12: false,
+    hourCycle: "h23",
     minute: "2-digit",
     month: "2-digit",
     timeZone,
     year: "numeric",
   }).formatToParts(date);
-
   const values = Object.fromEntries(
     parts.map((part) => [part.type, part.value])
   );
 
   return {
-    dateKey: `${values.year}-${values.month}-${values.day}`,
+    day: Number(values.day),
     hour: Number(values.hour),
     minute: Number(values.minute),
+    month: Number(values.month),
+    year: Number(values.year),
   };
 }
 
-function parseDateTime(dateKey: string, time: string) {
+function localNorwayDateTimeToUtc(dateKey: string, time: string) {
   const [year, month, day] = dateKey.split("-").map(Number);
   const [hour, minute] = time.split(":").map(Number);
 
@@ -71,24 +101,55 @@ function parseDateTime(dateKey: string, time: string) {
     return null;
   }
 
-  return new Date(year, month - 1, day, hour, minute);
+  const utcGuess = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  const actualParts = getTimeZoneParts(utcGuess);
+  const desiredTimestamp = Date.UTC(year, month - 1, day, hour, minute);
+  const actualTimestamp = Date.UTC(
+    actualParts.year,
+    actualParts.month - 1,
+    actualParts.day,
+    actualParts.hour,
+    actualParts.minute
+  );
+
+  return new Date(utcGuess.getTime() + desiredTimestamp - actualTimestamp);
 }
 
-function isTimeInNextHour(dateKey: string, time?: string | null) {
-  if (!time || time === "Hele dagen" || !/^\d{2}:\d{2}$/.test(time)) {
-    return false;
+function getReminderAt({
+  dateKey,
+  time,
+  reminderMinutesBefore,
+}: {
+  dateKey: string;
+  time?: string | null;
+  reminderMinutesBefore?: number | null;
+}) {
+  if (
+    !time ||
+    time === "Hele dagen" ||
+    !/^\d{2}:\d{2}$/.test(time) ||
+    reminderMinutesBefore === null ||
+    reminderMinutesBefore === undefined ||
+    !validReminderOffsets.has(reminderMinutesBefore)
+  ) {
+    return null;
   }
 
-  const targetDate = parseDateTime(dateKey, time);
+  const startsAt = localNorwayDateTimeToUtc(dateKey, time);
 
-  if (!targetDate) {
-    return false;
+  if (!startsAt) {
+    return null;
   }
 
-  const now = new Date();
-  const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+  return new Date(startsAt.getTime() - reminderMinutesBefore * 60 * 1000);
+}
 
-  return targetDate >= now && targetDate <= oneHourFromNow;
+function isReminderDue(reminderAt: Date, now = new Date()) {
+  const windowStart = new Date(
+    now.getTime() - reminderWindowMinutes * 60 * 1000
+  );
+
+  return reminderAt >= windowStart && reminderAt <= now;
 }
 
 function getTaskUserIds(task: TaskReminderRow) {
@@ -105,6 +166,10 @@ function getCalendarUserIds(event: CalendarReminderRow) {
   }
 
   return [event.calendar_owner];
+}
+
+function formatReminderTime(dateKey: string, time: string) {
+  return `${dateKey} ${time}`;
 }
 
 async function hasReminderBeenSent(logKey: string) {
@@ -129,7 +194,7 @@ async function markReminderSent(candidate: ReminderCandidate) {
       item_id: candidate.itemId,
       item_type: candidate.itemType,
       log_key: candidate.logKey,
-      notification_type: "reminder",
+      notification_type: "scheduled-reminder",
     });
 
   if (error && error.code !== "23505") {
@@ -138,143 +203,124 @@ async function markReminderSent(candidate: ReminderCandidate) {
 }
 
 async function readTaskReminderCandidates() {
-  const { dateKey, hour } = getNorwayDateParts();
+  const today = getNorwayDateKey();
+  const fromDate = addDaysToDateKey(today, -1);
+  const toDate = addDaysToDateKey(today, 2);
 
   const { data, error } = await supabaseServer
     .from("legacy_tasks")
-    .select("id, title, task_date, task_time, scope, created_by")
+    .select(
+      "id, title, task_date, task_time, scope, created_by, reminder_minutes_before"
+    )
     .eq("is_done", false)
     .eq("is_archived", false)
     .not("task_date", "is", null)
-    .lte("task_date", dateKey);
+    .not("reminder_minutes_before", "is", null)
+    .gte("task_date", fromDate)
+    .lte("task_date", toDate);
 
   if (error) {
     console.error("Kunne ikke hente oppgaver for påminnelse:", error);
     return [];
   }
 
-  return ((data ?? []) as TaskReminderRow[])
-    .flatMap((task): ReminderCandidate[] => {
-      if (!task.task_date) {
+  return ((data ?? []) as TaskReminderRow[]).flatMap(
+    (task): ReminderCandidate[] => {
+      if (!task.task_date || !task.task_time) {
         return [];
       }
 
+      const reminderAt = getReminderAt({
+        dateKey: task.task_date,
+        reminderMinutesBefore: task.reminder_minutes_before,
+        time: task.task_time,
+      });
       const userIds = getTaskUserIds(task);
 
-      if (userIds.length === 0) {
+      if (!reminderAt || !isReminderDue(reminderAt) || userIds.length === 0) {
         return [];
       }
 
-      const hasSpecificTime = Boolean(
-        task.task_time &&
-          task.task_time !== "Hele dagen" &&
-          /^\d{2}:\d{2}$/.test(task.task_time)
-      );
-
-      if (hasSpecificTime && isTimeInNextHour(task.task_date, task.task_time)) {
-        return [
-          {
-            body: `${task.title} nærmer seg kl. ${task.task_time}.`,
-            itemId: task.id,
-            itemType: "task",
-            logKey: `task-due-soon:${task.id}:${task.task_date}:${task.task_time}`,
-            title: "Oppgave nærmer seg",
-            url: "/tasks",
-            userIds,
-          },
-        ];
-      }
-
-      if (!hasSpecificTime && task.task_date <= dateKey && hour >= 7) {
-        return [
-          {
-            body:
-              task.task_date === dateKey
-                ? `${task.title} ligger på dagens liste.`
-                : `${task.title} er forsinket og ligger fortsatt åpen.`,
-            itemId: task.id,
-            itemType: "task",
-            logKey: `task-day:${task.id}:${dateKey}`,
-            title:
-              task.task_date === dateKey
-                ? "Oppgave i dag"
-                : "Forsinket oppgave",
-            url: "/tasks",
-            userIds,
-          },
-        ];
-      }
-
-      return [];
-    });
+      return [
+        {
+          body: `${task.title} er satt til ${formatReminderTime(
+            task.task_date,
+            task.task_time
+          )}.`,
+          itemId: task.id,
+          itemType: "task",
+          logKey: `task-reminder:${task.id}:${task.task_date}:${task.task_time}:${task.reminder_minutes_before}`,
+          reminderAt,
+          title: "Oppgavepåminnelse",
+          url: "/tasks",
+          userIds,
+        },
+      ];
+    }
+  );
 }
 
 async function readCalendarReminderCandidates() {
-  const { dateKey, hour } = getNorwayDateParts();
+  const today = getNorwayDateKey();
+  const fromDate = addDaysToDateKey(today, -1);
+  const toDate = addDaysToDateKey(today, 2);
 
   const { data, error } = await supabaseServer
     .from("legacy_calendar_events")
-    .select("id, title, event_date, event_time, calendar_owner")
-    .eq("event_date", dateKey);
+    .select(
+      "id, title, event_date, event_time, calendar_owner, reminder_minutes_before"
+    )
+    .not("reminder_minutes_before", "is", null)
+    .gte("event_date", fromDate)
+    .lte("event_date", toDate);
 
   if (error) {
     console.error("Kunne ikke hente kalender for påminnelse:", error);
     return [];
   }
 
-  return ((data ?? []) as CalendarReminderRow[])
-    .flatMap((event): ReminderCandidate[] => {
-      const userIds = getCalendarUserIds(event);
-
-      if (userIds.length === 0) {
+  return ((data ?? []) as CalendarReminderRow[]).flatMap(
+    (event): ReminderCandidate[] => {
+      if (!event.event_time) {
         return [];
       }
 
-      const hasSpecificTime = Boolean(
-        event.event_time &&
-          event.event_time !== "Hele dagen" &&
-          /^\d{2}:\d{2}$/.test(event.event_time)
-      );
+      const reminderAt = getReminderAt({
+        dateKey: event.event_date,
+        reminderMinutesBefore: event.reminder_minutes_before,
+        time: event.event_time,
+      });
+      const userIds = getCalendarUserIds(event);
 
-      if (
-        hasSpecificTime &&
-        isTimeInNextHour(event.event_date, event.event_time)
-      ) {
-        return [
-          {
-            body: `${event.title} starter kl. ${event.event_time}.`,
-            itemId: event.id,
-            itemType: "calendar",
-            logKey: `calendar-start-soon:${event.id}:${event.event_date}:${event.event_time}`,
-            title: "Avtale nærmer seg",
-            url: "/calendar",
-            userIds,
-          },
-        ];
+      if (!reminderAt || !isReminderDue(reminderAt) || userIds.length === 0) {
+        return [];
       }
 
-      if (!hasSpecificTime && hour >= 7) {
-        return [
-          {
-            body: `${event.title} ligger i kalenderen i dag.`,
-            itemId: event.id,
-            itemType: "calendar",
-            logKey: `calendar-day:${event.id}:${event.event_date}`,
-            title: "Avtale i dag",
-            url: "/calendar",
-            userIds,
-          },
-        ];
-      }
-
-      return [];
-    });
+      return [
+        {
+          body: `${event.title} starter ${formatReminderTime(
+            event.event_date,
+            event.event_time
+          )}.`,
+          itemId: event.id,
+          itemType: "calendar",
+          logKey: `calendar-reminder:${event.id}:${event.event_date}:${event.event_time}:${event.reminder_minutes_before}`,
+          reminderAt,
+          title: "Kalenderpåminnelse",
+          url: "/calendar",
+          userIds,
+        },
+      ];
+    }
+  );
 }
 
 export async function GET() {
   const taskCandidates = await readTaskReminderCandidates();
   const calendarCandidates = await readCalendarReminderCandidates();
-  const candidates = [...taskCandidates, ...calendarCandidates];
+  const candidates = [...taskCandidates, ...calendarCandidates].sort(
+    (a, b) => a.reminderAt.getTime() - b.reminderAt.getTime()
+  );
   let sent = 0;
   let skipped = 0;
 
@@ -301,5 +347,6 @@ export async function GET() {
     candidates: candidates.length,
     sent,
     skipped,
+    windowMinutes: reminderWindowMinutes,
   });
 }

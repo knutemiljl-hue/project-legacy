@@ -30,6 +30,11 @@ import {
   getLocalDateKey,
   getRecurrenceLabel,
 } from "@/lib/tasks";
+import {
+  ReminderValue,
+  normalizeReminderOffset,
+  reminderOptions,
+} from "@/lib/reminders";
 
 type QuickActionId = "task" | "purchase" | "calendar" | "shopping" | "finance";
 
@@ -226,6 +231,8 @@ export default function QuickAddMenu() {
   const [taskScope, setTaskScope] = useState<"personal" | "family">("personal");
   const [taskCategory, setTaskCategory] = useState<TaskCategory>("task");
   const [taskSubtasksInput, setTaskSubtasksInput] = useState("");
+  const [taskReminderMinutesBefore, setTaskReminderMinutesBefore] =
+    useState<ReminderValue>(null);
   const [taskRecurrenceFrequency, setTaskRecurrenceFrequency] =
     useState<RecurrenceFrequency>("none");
   const [taskRecurrenceUntil, setTaskRecurrenceUntil] = useState("");
@@ -241,6 +248,8 @@ export default function QuickAddMenu() {
   const [calendarEndTime, setCalendarEndTime] = useState(
     DEFAULT_CALENDAR_END_TIME
   );
+  const [calendarReminderMinutesBefore, setCalendarReminderMinutesBefore] =
+    useState<ReminderValue>(null);
   const [calendarLocation, setCalendarLocation] = useState("");
   const [calendarType, setCalendarType] =
     useState<CalendarEventType>("family");
@@ -307,6 +316,7 @@ export default function QuickAddMenu() {
     setTaskScope("personal");
     setTaskCategory("task");
     setTaskSubtasksInput("");
+    setTaskReminderMinutesBefore(null);
     setTaskRecurrenceFrequency("none");
     setTaskRecurrenceUntil("");
 
@@ -317,6 +327,7 @@ export default function QuickAddMenu() {
     setCalendarEndDate(getCalendarDateKey());
     setCalendarStartTime(DEFAULT_CALENDAR_START_TIME);
     setCalendarEndTime(DEFAULT_CALENDAR_END_TIME);
+    setCalendarReminderMinutesBefore(null);
     setCalendarLocation("");
     setCalendarType("family");
     setCalendarOwner("family");
@@ -359,6 +370,7 @@ export default function QuickAddMenu() {
       scope: taskScope,
       category: taskCategory,
       subtasks: parseSubtaskInput(taskSubtasksInput),
+      reminderMinutesBefore: taskReminderMinutesBefore,
       recurrenceFrequency: taskRecurrenceFrequency,
       recurrenceUntil: taskRecurrenceUntil,
     });
@@ -397,6 +409,7 @@ export default function QuickAddMenu() {
       endDate: calendarEndDate,
       startTime: calendarStartTime,
       endTime: calendarEndTime,
+      reminderMinutesBefore: calendarReminderMinutesBefore,
       location: calendarLocation,
       type: calendarType,
       calendarOwner,
@@ -595,7 +608,7 @@ export default function QuickAddMenu() {
                       />
                     </label>
 
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
                       <label className="block">
                         <span className="text-sm font-medium text-[#24312A]">
                           Første dato
@@ -641,9 +654,43 @@ export default function QuickAddMenu() {
                         <input
                           type="time"
                           value={taskTime}
-                          onChange={(event) => setTaskTime(event.target.value)}
+                          onChange={(event) => {
+                            const nextTime = event.target.value;
+
+                            setTaskTime(nextTime);
+
+                            if (!nextTime) {
+                              setTaskReminderMinutesBefore(null);
+                            }
+                          }}
                           className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition focus:border-[#8D846F] sm:text-sm"
                         />
+                      </label>
+
+                      <label className="block">
+                        <span className="text-sm font-medium text-[#24312A]">
+                          Varsel
+                        </span>
+
+                        <select
+                          value={taskReminderMinutesBefore ?? ""}
+                          onChange={(event) =>
+                            setTaskReminderMinutesBefore(
+                              normalizeReminderOffset(event.target.value)
+                            )
+                          }
+                          disabled={!taskTime}
+                          className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition focus:border-[#8D846F] disabled:cursor-not-allowed disabled:opacity-55 sm:text-sm"
+                        >
+                          {reminderOptions.map((option) => (
+                            <option
+                              key={option.value ?? "none"}
+                              value={option.value ?? ""}
+                            >
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
                       </label>
                     </div>
 
@@ -867,6 +914,32 @@ export default function QuickAddMenu() {
                         />
                       </label>
                     </div>
+
+                    <label className="block">
+                      <span className="text-sm font-medium text-[#24312A]">
+                        Varsel
+                      </span>
+
+                      <select
+                        value={calendarReminderMinutesBefore ?? ""}
+                        onChange={(event) =>
+                          setCalendarReminderMinutesBefore(
+                            normalizeReminderOffset(event.target.value)
+                          )
+                        }
+                        disabled={!calendarStartTime}
+                        className="mt-2 w-full rounded-2xl border border-stone-200 bg-[#F7F4EA] px-4 py-3 text-base text-[#24312A] outline-none transition focus:border-[#8D846F] disabled:cursor-not-allowed disabled:opacity-55 sm:text-sm"
+                      >
+                        {reminderOptions.map((option) => (
+                          <option
+                            key={option.value ?? "none"}
+                            value={option.value ?? ""}
+                          >
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
 
                     {calendarHasInvalidRange && (
                       <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm leading-6 text-red-700">

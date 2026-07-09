@@ -27,3 +27,27 @@ create index if not exists legacy_push_notification_log_item_idx
   on public.legacy_push_notification_log (item_type, item_id);
 
 alter table public.legacy_push_notification_log enable row level security;
+
+alter table public.legacy_tasks
+  add column if not exists reminder_minutes_before integer
+  check (
+    reminder_minutes_before is null
+    or reminder_minutes_before in (0, 5, 15, 30, 60, 1440)
+  );
+
+alter table public.legacy_calendar_events
+  add column if not exists reminder_minutes_before integer
+  check (
+    reminder_minutes_before is null
+    or reminder_minutes_before in (0, 5, 15, 30, 60, 1440)
+  );
+
+create index if not exists legacy_tasks_reminder_idx
+  on public.legacy_tasks (task_date, task_time)
+  where reminder_minutes_before is not null
+    and is_done = false
+    and is_archived = false;
+
+create index if not exists legacy_calendar_events_reminder_idx
+  on public.legacy_calendar_events (event_date, event_time)
+  where reminder_minutes_before is not null;

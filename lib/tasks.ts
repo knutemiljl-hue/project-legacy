@@ -3,6 +3,10 @@ import {
   notifyTaskCreatedByPush,
   notifyTaskUpdatedByPush,
 } from "@/lib/push-events";
+import {
+  ReminderValue,
+  normalizeReminderOffset,
+} from "@/lib/reminders";
 import { LegacyUserId, readActiveUser } from "@/lib/users";
 
 export const XP_PER_TASK = 5;
@@ -36,6 +40,7 @@ export type Task = {
   completedAt?: string;
   archivedAt?: string;
   xp: number;
+  reminderMinutesBefore?: ReminderValue;
 };
 
 export type CompletionRecord = {
@@ -59,6 +64,7 @@ export type ArchivedTask = {
   xp: number;
   createdBy?: LegacyUserId;
   completedBy?: LegacyUserId;
+  reminderMinutesBefore?: ReminderValue;
 };
 
 export type DashboardTask = {
@@ -78,6 +84,7 @@ export type TaskInput = {
   scope: TaskScope;
   category?: TaskCategory;
   subtasks?: Array<string | TaskSubtask>;
+  reminderMinutesBefore?: ReminderValue;
 };
 
 export type RecurringTaskInput = TaskInput & {
@@ -93,6 +100,7 @@ export type TaskUpdateInput = {
   scope: TaskScope;
   category: TaskCategory;
   subtasks?: Array<string | TaskSubtask>;
+  reminderMinutesBefore?: ReminderValue;
 };
 
 type TaskRow = {
@@ -111,7 +119,11 @@ type TaskRow = {
   archived_at: string | null;
   xp: number | null;
   created_at: string;
+  reminder_minutes_before: number | null;
 };
+
+const TASK_SELECT =
+  "id, title, subtitle, task_date, task_time, scope, task_category, is_done, is_archived, created_by, completed_by, completed_at, archived_at, xp, created_at, reminder_minutes_before";
 
 const TASK_DETAILS_PREFIX = "__legacy_task_details_v1__:";
 
@@ -236,6 +248,9 @@ function mapTask(row: TaskRow): Task {
     completedAt: row.completed_at ?? undefined,
     archivedAt: row.archived_at ?? undefined,
     xp: row.xp ?? XP_PER_TASK,
+    reminderMinutesBefore: normalizeReminderOffset(
+      row.reminder_minutes_before
+    ),
   };
 }
 
@@ -461,9 +476,7 @@ export async function readTasks(): Promise<Task[]> {
 
   const { data, error } = await supabase
     .from("legacy_tasks")
-    .select(
-      "id, title, subtitle, task_date, task_time, scope, task_category, is_done, is_archived, created_by, completed_by, completed_at, archived_at, xp, created_at"
-    )
+    .select(TASK_SELECT)
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -482,9 +495,7 @@ export async function readArchivedTasks(): Promise<ArchivedTask[]> {
 
   const { data, error } = await supabase
     .from("legacy_tasks")
-    .select(
-      "id, title, subtitle, task_date, task_time, scope, task_category, is_done, is_archived, created_by, completed_by, completed_at, archived_at, xp, created_at"
-    )
+    .select(TASK_SELECT)
     .eq("is_archived", true)
     .order("archived_at", { ascending: false });
 
@@ -519,9 +530,7 @@ export async function readArchivedTasks(): Promise<ArchivedTask[]> {
 export async function readCompletedTasks(): Promise<Task[]> {
   const { data, error } = await supabase
     .from("legacy_tasks")
-    .select(
-      "id, title, subtitle, task_date, task_time, scope, task_category, is_done, is_archived, created_by, completed_by, completed_at, archived_at, xp, created_at"
-    )
+    .select(TASK_SELECT)
     .eq("is_done", true)
     .order("completed_at", { ascending: false });
 
@@ -561,6 +570,9 @@ export async function addTask(input: TaskInput) {
     completed_by: null,
     completed_at: null,
     xp: XP_PER_TASK,
+    reminder_minutes_before: input.time
+      ? normalizeReminderOffset(input.reminderMinutesBefore)
+      : null,
   });
 
   if (error) {
@@ -625,6 +637,9 @@ export async function addRecurringTasks(input: RecurringTaskInput) {
       completed_by: null,
       completed_at: null,
       xp: XP_PER_TASK,
+      reminder_minutes_before: input.time
+        ? normalizeReminderOffset(input.reminderMinutesBefore)
+        : null,
     }))
   );
 
