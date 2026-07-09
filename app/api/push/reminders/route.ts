@@ -37,7 +37,7 @@ type ReminderCandidate = {
 
 const allUsers: LegacyUserId[] = ["knut", "ingrid"];
 const timeZone = "Europe/Oslo";
-const reminderWindowMinutes = 10;
+const reminderWindowMinutes = 30;
 const validReminderOffsets = new Set([0, 5, 15, 30, 60, 1440]);
 
 function getNorwayDateKey(date = new Date()) {
